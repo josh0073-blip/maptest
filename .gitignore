@@ -1,0 +1,21 @@
+node_modules/
+playwright-report/
+test-results/
+
+# Local editor/agent workspace data
+.continue/
+
+# OS noise files
+.DS_Store
+Thumbs.db
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
