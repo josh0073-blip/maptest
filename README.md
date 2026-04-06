@@ -2,6 +2,12 @@
 
 Static background map + editable text vendor pins.
 
+Status
+------
+
+- CI: Playwright smoke tests run on push/PR via GitHub Actions (.github/workflows/ci.yml)
+- License: MIT (LICENSE)
+
 ## Run
 - Open `index.html` in browser.
 - Click "Add Vendor Pin" to add a pin.
