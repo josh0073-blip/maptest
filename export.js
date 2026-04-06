@@ -8,6 +8,77 @@
       return new Date().toISOString().slice(0, 10);
     }
 
+    function trimWhitespaceFromCanvas(sourceCanvas, padding) {
+      const canvas = sourceCanvas;
+      if (!canvas || typeof canvas.getContext !== 'function') return canvas;
+
+      let context = null;
+      try {
+        context = canvas.getContext('2d', { willReadFrequently: true }) || canvas.getContext('2d');
+      } catch (err) {
+        return canvas;
+      }
+      if (!context) return canvas;
+
+      const width = canvas.width;
+      const height = canvas.height;
+      if (width <= 0 || height <= 0) return canvas;
+
+      let data = null;
+      try {
+        data = context.getImageData(0, 0, width, height).data;
+      } catch (err) {
+        // Cross-origin images can taint the canvas; in that case keep original export.
+        return canvas;
+      }
+      const whiteThreshold = 248;
+
+      let minX = width;
+      let minY = height;
+      let maxX = -1;
+      let maxY = -1;
+
+      for (let y = 0; y < height; y++) {
+        const rowOffset = y * width * 4;
+        for (let x = 0; x < width; x++) {
+          const offset = rowOffset + (x * 4);
+          const r = data[offset];
+          const g = data[offset + 1];
+          const b = data[offset + 2];
+          const a = data[offset + 3];
+
+          // Keep any pixel that is not near-solid white background.
+          const isContent = a > 0 && (r < whiteThreshold || g < whiteThreshold || b < whiteThreshold);
+          if (!isContent) continue;
+
+          if (x < minX) minX = x;
+          if (y < minY) minY = y;
+          if (x > maxX) maxX = x;
+          if (y > maxY) maxY = y;
+        }
+      }
+
+      if (maxX < minX || maxY < minY) {
+        return canvas;
+      }
+
+      const pad = Math.max(0, Number(padding) || 0);
+      const cropX = Math.max(0, minX - pad);
+      const cropY = Math.max(0, minY - pad);
+      const cropW = Math.min(width - cropX, (maxX - minX + 1) + (pad * 2));
+      const cropH = Math.min(height - cropY, (maxY - minY + 1) + (pad * 2));
+
+      if (cropW <= 0 || cropH <= 0) return canvas;
+
+      const trimmedCanvas = document.createElement('canvas');
+      trimmedCanvas.width = cropW;
+      trimmedCanvas.height = cropH;
+      const trimmedContext = trimmedCanvas.getContext('2d');
+      if (!trimmedContext) return canvas;
+      trimmedContext.drawImage(canvas, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
+      return trimmedCanvas;
+    }
+
     async function renderMapViewport(backgroundColor) {
       if (typeof html2canvas === 'undefined') {
         if (notify && typeof notify.error === 'function') notify.error('html2canvas library not loaded.');
@@ -17,7 +88,7 @@
 
       const exportScale = Math.max(2, window.devicePixelRatio || 1);
 
-      return html2canvas(mapContent, {
+      const renderedCanvas = await html2canvas(mapContent, {
         backgroundColor: backgroundColor || '#ffffff',
         scale: exportScale,
         useCORS: true,
@@ -47,16 +118,22 @@
           const clonedPins = clonedDocument.querySelectorAll('.vendor-pin');
           clonedPins.forEach(function (pin) {
             const sourcePin = sourcePinsById.get(pin.getAttribute('data-id'));
-            const computedStyle = sourcePin ? window.getComputedStyle(sourcePin) : (clonedDocument.defaultView || window).getComputedStyle(pin);
-            const liveBackground = sourcePin ? sourcePin.style.background : '';
-            const liveBackgroundColor = sourcePin ? sourcePin.style.backgroundColor : '';
-            const nextBackground = liveBackground || liveBackgroundColor || computedStyle.backgroundColor;
-            pin.style.setProperty('background', nextBackground, 'important');
-            pin.style.setProperty('background-color', computedStyle.backgroundColor, 'important');
-            pin.style.setProperty('border-color', computedStyle.borderColor, 'important');
+            if (!sourcePin) return;
+
+            // Preserve only explicit inline custom pin colors. Let normal CSS/computed
+            // styles render naturally in clone to avoid edge color artifacts on export.
+            const liveBackground = sourcePin.style.background || sourcePin.style.backgroundColor || '';
+            if (liveBackground) {
+              pin.style.setProperty('background', liveBackground, 'important');
+            } else {
+              pin.style.removeProperty('background');
+              pin.style.removeProperty('background-color');
+            }
           });
         }
       });
+
+      return trimWhitespaceFromCanvas(renderedCanvas, 18);
     }
 
     async function exportMapAsImage() {

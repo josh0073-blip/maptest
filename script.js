@@ -11,6 +11,10 @@ const congestionToolsGroup = document.getElementById('congestion-tools-group');
 const featureCongestionToggle = document.getElementById('feature-congestion-toggle');
 const congestionKeyPanel = document.getElementById('congestion-key-panel');
 const congestionKeyList = document.getElementById('congestion-key-list');
+const mapCongestionKeyPanel = document.getElementById('map-congestion-key-panel');
+const mapCongestionKeyList = document.getElementById('map-congestion-key-list');
+const mapCongestionKeyDragHandle = document.getElementById('map-congestion-key-drag-handle');
+const mapCongestionKeyResizeHandle = document.getElementById('map-congestion-key-resize-handle');
 
 const bgUrlInput = document.getElementById('bg-url-input');
 const bgUrlBtn = document.getElementById('bg-url-btn');
@@ -119,25 +123,152 @@ const BACKGROUND_SCALE_STEP = 0.1;
 const BACKGROUND_OPACITY_MIN = 0;
 const BACKGROUND_OPACITY_MAX = 1;
 const FEATURE_FLAG_STORAGE_KEY = 'farmersMarketFeatureFlags';
+const CONGESTION_KEY_DEFAULT_POSITION = Object.freeze({ x: 16, y: 72 });
+const CONGESTION_KEY_DEFAULT_SIZE = Object.freeze({ width: 280, height: 260 });
+const CONGESTION_KEY_MIN_WIDTH = 220;
+const CONGESTION_KEY_MIN_HEIGHT = 150;
+const TOUCH_DOUBLE_TAP_MS = 380;
 const DEFAULT_FEATURE_FLAGS = Object.freeze({
-  congestionLabelSubstitution: false
+  congestionLabelSubstitution: false,
+  congestionMapKeyPosition: CONGESTION_KEY_DEFAULT_POSITION,
+  congestionMapKeySize: CONGESTION_KEY_DEFAULT_SIZE
 });
+
+function normalizeCongestionMapKeyPosition(value) {
+  const candidate = value && typeof value === 'object' ? value : {};
+  const x = Number(candidate.x);
+  const y = Number(candidate.y);
+  return {
+    x: Number.isFinite(x) ? x : CONGESTION_KEY_DEFAULT_POSITION.x,
+    y: Number.isFinite(y) ? y : CONGESTION_KEY_DEFAULT_POSITION.y
+  };
+}
+
+function normalizeCongestionMapKeySize(value) {
+  const candidate = value && typeof value === 'object' ? value : {};
+  const width = Number(candidate.width);
+  const height = Number(candidate.height);
+  return {
+    width: Number.isFinite(width) ? width : CONGESTION_KEY_DEFAULT_SIZE.width,
+    height: Number.isFinite(height) ? height : CONGESTION_KEY_DEFAULT_SIZE.height
+  };
+}
 
 function readFeatureFlags() {
   try {
     const raw = localStorage.getItem(FEATURE_FLAG_STORAGE_KEY);
     if (!raw) return Object.assign({}, DEFAULT_FEATURE_FLAGS);
     const parsed = JSON.parse(raw);
-    return Object.assign({}, DEFAULT_FEATURE_FLAGS, parsed && typeof parsed === 'object' ? parsed : {});
+    const nextFlags = Object.assign({}, DEFAULT_FEATURE_FLAGS, parsed && typeof parsed === 'object' ? parsed : {});
+    nextFlags.congestionMapKeyPosition = normalizeCongestionMapKeyPosition(nextFlags.congestionMapKeyPosition);
+    nextFlags.congestionMapKeySize = normalizeCongestionMapKeySize(nextFlags.congestionMapKeySize);
+    return nextFlags;
   } catch (err) {
-    return Object.assign({}, DEFAULT_FEATURE_FLAGS);
+    return {
+      congestionLabelSubstitution: false,
+      congestionMapKeyPosition: normalizeCongestionMapKeyPosition(null),
+      congestionMapKeySize: normalizeCongestionMapKeySize(null)
+    };
   }
 }
 
 let featureFlags = readFeatureFlags();
+const mapCongestionKeyDragState = {
+  armed: false,
+  dragging: false,
+  pendingConfirm: false,
+  lastTapAt: 0,
+  pointerId: null,
+  startClientX: 0,
+  startClientY: 0,
+  startPosX: CONGESTION_KEY_DEFAULT_POSITION.x,
+  startPosY: CONGESTION_KEY_DEFAULT_POSITION.y,
+  activePosX: CONGESTION_KEY_DEFAULT_POSITION.x,
+  activePosY: CONGESTION_KEY_DEFAULT_POSITION.y
+};
+const mapCongestionKeyResizeState = {
+  resizing: false,
+  pointerId: null,
+  startClientX: 0,
+  startClientY: 0,
+  startWidth: CONGESTION_KEY_DEFAULT_SIZE.width,
+  startHeight: CONGESTION_KEY_DEFAULT_SIZE.height,
+  activeWidth: CONGESTION_KEY_DEFAULT_SIZE.width,
+  activeHeight: CONGESTION_KEY_DEFAULT_SIZE.height
+};
 
 function isCongestionModeEnabled() {
   return !!featureFlags.congestionLabelSubstitution;
+}
+
+function getCongestionMapKeyPosition() {
+  return normalizeCongestionMapKeyPosition(featureFlags.congestionMapKeyPosition);
+}
+
+function getCongestionMapKeySize() {
+  return normalizeCongestionMapKeySize(featureFlags.congestionMapKeySize);
+}
+
+function setCongestionMapKeyPosition(position, options) {
+  const opts = options && typeof options === 'object' ? options : {};
+  const persist = opts.persist !== false;
+  const nextPosition = normalizeCongestionMapKeyPosition(position);
+
+  featureFlags = Object.assign({}, featureFlags, {
+    congestionMapKeyPosition: nextPosition
+  });
+
+  if (mapCongestionKeyPanel) {
+    mapCongestionKeyPanel.style.left = `${Math.round(nextPosition.x)}px`;
+    mapCongestionKeyPanel.style.top = `${Math.round(nextPosition.y)}px`;
+  }
+
+  if (persist) persistFeatureFlags();
+}
+
+function setCongestionMapKeySize(size, options) {
+  const opts = options && typeof options === 'object' ? options : {};
+  const persist = opts.persist !== false;
+  const nextSize = normalizeCongestionMapKeySize(size);
+
+  featureFlags = Object.assign({}, featureFlags, {
+    congestionMapKeySize: nextSize
+  });
+
+  if (mapCongestionKeyPanel) {
+    mapCongestionKeyPanel.style.width = `${Math.round(nextSize.width)}px`;
+    mapCongestionKeyPanel.style.height = `${Math.round(nextSize.height)}px`;
+  }
+
+  if (persist) persistFeatureFlags();
+}
+
+function setMapCongestionKeyArmed(armed) {
+  mapCongestionKeyDragState.armed = !!armed;
+  if (mapCongestionKeyPanel) {
+    mapCongestionKeyPanel.classList.toggle('drag-armed', mapCongestionKeyDragState.armed);
+  }
+}
+
+function resetMapCongestionKeyDragState() {
+  mapCongestionKeyDragState.dragging = false;
+  mapCongestionKeyDragState.pointerId = null;
+  mapCongestionKeyDragState.pendingConfirm = false;
+  mapCongestionKeyDragState.lastTapAt = 0;
+  document.removeEventListener('pointermove', onMapCongestionKeyPointerMove);
+  document.removeEventListener('pointerup', onMapCongestionKeyPointerUp);
+  document.removeEventListener('pointercancel', onMapCongestionKeyPointerCancel);
+  setMapCongestionKeyArmed(false);
+  if (mapCongestionKeyPanel) mapCongestionKeyPanel.classList.remove('dragging');
+}
+
+function resetMapCongestionKeyResizeState() {
+  mapCongestionKeyResizeState.resizing = false;
+  mapCongestionKeyResizeState.pointerId = null;
+  document.removeEventListener('pointermove', onMapCongestionKeyResizePointerMove);
+  document.removeEventListener('pointerup', onMapCongestionKeyResizePointerUp);
+  document.removeEventListener('pointercancel', onMapCongestionKeyResizePointerCancel);
+  if (mapCongestionKeyPanel) mapCongestionKeyPanel.classList.remove('resizing');
 }
 
 function persistFeatureFlags() {
@@ -152,6 +283,15 @@ function syncCongestionFeatureUi() {
   if (congestionToolsGroup) congestionToolsGroup.hidden = false;
   if (featureCongestionToggle) featureCongestionToggle.checked = isCongestionModeEnabled();
   if (!isCongestionModeEnabled() && congestionKeyPanel) congestionKeyPanel.hidden = true;
+  if (mapCongestionKeyPanel) {
+    mapCongestionKeyPanel.hidden = !isCongestionModeEnabled();
+  }
+  if (!isCongestionModeEnabled()) {
+    resetMapCongestionKeyDragState();
+    resetMapCongestionKeyResizeState();
+  }
+  applyMapCongestionKeySizeClamped({ persist: false });
+  applyMapCongestionKeyPositionClamped({ persist: false });
 }
 
 syncCongestionFeatureUi();
@@ -185,6 +325,8 @@ const vendorListTools = window.createVendorListTools({
   vendorList,
   congestionKeyPanel,
   congestionKeyList,
+  mapCongestionKeyPanel,
+  mapCongestionKeyList,
   isCongestionModeEnabled,
   getVendors: () => appState.vendors,
   getVendorCategories: () => appState.vendorCategories,
@@ -331,6 +473,7 @@ const panZoomTools = window.createPanZoomTools({
 });
 const applyZoomPan = panZoomTools.applyZoomPan;
 const setZoom = panZoomTools.setZoom;
+const getZoomLevel = panZoomTools.getZoomLevel;
 const addMapPanHandlers = panZoomTools.addMapPanHandlers;
 
 function applyBackgroundScale() {
@@ -349,6 +492,317 @@ function applyBackgroundScale() {
 
   bgSizeRange.value = appState.backgroundScale;
   bgSizeValue.textContent = `${Math.round(appState.backgroundScale * 100)}%`;
+  applyMapCongestionKeySizeClamped({ persist: false });
+  applyMapCongestionKeyPositionClamped({ persist: false });
+}
+
+function clampMapCongestionKeySize(size) {
+  const nextSize = normalizeCongestionMapKeySize(size);
+  if (!mapContent) return nextSize;
+
+  const mapWidth = mapContent.clientWidth || parseFloat(mapContent.style.width) || nextSize.width;
+  const mapHeight = mapContent.clientHeight || parseFloat(mapContent.style.height) || nextSize.height;
+  const maxWidth = Math.max(CONGESTION_KEY_MIN_WIDTH, mapWidth - 8);
+  const maxHeight = Math.max(CONGESTION_KEY_MIN_HEIGHT, mapHeight - 8);
+
+  return {
+    width: Math.min(maxWidth, Math.max(CONGESTION_KEY_MIN_WIDTH, nextSize.width)),
+    height: Math.min(maxHeight, Math.max(CONGESTION_KEY_MIN_HEIGHT, nextSize.height))
+  };
+}
+
+function applyMapCongestionKeySizeClamped(options) {
+  const opts = options && typeof options === 'object' ? options : {};
+  const clamped = clampMapCongestionKeySize(getCongestionMapKeySize());
+  setCongestionMapKeySize(clamped, { persist: opts.persist !== false });
+  return clamped;
+}
+
+function clampMapCongestionKeyPosition(position) {
+  const nextPosition = normalizeCongestionMapKeyPosition(position);
+  if (!mapCongestionKeyPanel || !mapContent) return nextPosition;
+
+  const panelWidth = mapCongestionKeyPanel.offsetWidth || 220;
+  const panelHeight = mapCongestionKeyPanel.offsetHeight || 120;
+  const mapWidth = mapContent.clientWidth || parseFloat(mapContent.style.width) || panelWidth;
+  const mapHeight = mapContent.clientHeight || parseFloat(mapContent.style.height) || panelHeight;
+  const maxX = Math.max(0, mapWidth - panelWidth - 8);
+  const maxY = Math.max(0, mapHeight - panelHeight - 8);
+
+  return {
+    x: Math.min(maxX, Math.max(0, nextPosition.x)),
+    y: Math.min(maxY, Math.max(0, nextPosition.y))
+  };
+}
+
+function applyMapCongestionKeyPositionClamped(options) {
+  const opts = options && typeof options === 'object' ? options : {};
+  const clamped = clampMapCongestionKeyPosition(getCongestionMapKeyPosition());
+  setCongestionMapKeyPosition(clamped, { persist: opts.persist !== false });
+  return clamped;
+}
+
+function endMapCongestionKeyDrag(persist) {
+  mapCongestionKeyDragState.dragging = false;
+  mapCongestionKeyDragState.pointerId = null;
+  if (mapCongestionKeyPanel) mapCongestionKeyPanel.classList.remove('dragging');
+  setMapCongestionKeyArmed(false);
+
+  document.removeEventListener('pointermove', onMapCongestionKeyPointerMove);
+  document.removeEventListener('pointerup', onMapCongestionKeyPointerUp);
+  document.removeEventListener('pointercancel', onMapCongestionKeyPointerCancel);
+
+  if (persist) {
+    setCongestionMapKeyPosition({
+      x: mapCongestionKeyDragState.activePosX,
+      y: mapCongestionKeyDragState.activePosY
+    }, { persist: true });
+    persistState();
+  }
+}
+
+function onMapCongestionKeyPointerMove(event) {
+  if (!mapCongestionKeyDragState.dragging) return;
+  if (event.pointerId !== mapCongestionKeyDragState.pointerId) return;
+
+  event.preventDefault();
+  event.stopPropagation();
+
+  const zoom = typeof getZoomLevel === 'function'
+    ? Math.max(0.1, Number(getZoomLevel()) || 1)
+    : 1;
+  const dx = (event.clientX - mapCongestionKeyDragState.startClientX) / zoom;
+  const dy = (event.clientY - mapCongestionKeyDragState.startClientY) / zoom;
+  const nextPosition = clampMapCongestionKeyPosition({
+    x: mapCongestionKeyDragState.startPosX + dx,
+    y: mapCongestionKeyDragState.startPosY + dy
+  });
+
+  mapCongestionKeyDragState.activePosX = nextPosition.x;
+  mapCongestionKeyDragState.activePosY = nextPosition.y;
+  setCongestionMapKeyPosition(nextPosition, { persist: false });
+}
+
+function onMapCongestionKeyPointerUp(event) {
+  if (!mapCongestionKeyDragState.dragging) return;
+  if (event.pointerId !== mapCongestionKeyDragState.pointerId) return;
+
+  event.preventDefault();
+  event.stopPropagation();
+  endMapCongestionKeyDrag(true);
+}
+
+function onMapCongestionKeyPointerCancel(event) {
+  if (!mapCongestionKeyDragState.dragging) return;
+  if (event.pointerId !== mapCongestionKeyDragState.pointerId) return;
+
+  event.preventDefault();
+  event.stopPropagation();
+  endMapCongestionKeyDrag(false);
+}
+
+function startMapCongestionKeyDrag(event) {
+  if (!mapCongestionKeyPanel) return;
+
+  const clamped = applyMapCongestionKeyPositionClamped({ persist: false });
+  mapCongestionKeyDragState.dragging = true;
+  mapCongestionKeyDragState.pointerId = event.pointerId;
+  mapCongestionKeyDragState.startClientX = event.clientX;
+  mapCongestionKeyDragState.startClientY = event.clientY;
+  mapCongestionKeyDragState.startPosX = clamped.x;
+  mapCongestionKeyDragState.startPosY = clamped.y;
+  mapCongestionKeyDragState.activePosX = clamped.x;
+  mapCongestionKeyDragState.activePosY = clamped.y;
+  mapCongestionKeyPanel.classList.add('dragging');
+
+  if (mapCongestionKeyDragHandle && typeof mapCongestionKeyDragHandle.setPointerCapture === 'function') {
+    try {
+      mapCongestionKeyDragHandle.setPointerCapture(event.pointerId);
+    } catch (err) {
+      // ignore capture failures
+    }
+  }
+
+  document.addEventListener('pointermove', onMapCongestionKeyPointerMove);
+  document.addEventListener('pointerup', onMapCongestionKeyPointerUp);
+  document.addEventListener('pointercancel', onMapCongestionKeyPointerCancel);
+}
+
+async function confirmMapCongestionKeyDragArm() {
+  if (mapCongestionKeyDragState.pendingConfirm) return;
+  mapCongestionKeyDragState.pendingConfirm = true;
+  let accepted = false;
+  try {
+    if (typeof window.showConfirmAsync === 'function') {
+      accepted = await window.showConfirmAsync(
+        'Enable touch drag for the map congestion key? Drag mode will turn off after you drop it.',
+        {
+          title: 'Move Congestion Key',
+          acceptLabel: 'Enable Drag',
+          cancelLabel: 'Cancel'
+        }
+      );
+    } else {
+      accepted = window.confirm('Enable touch drag for the map congestion key?');
+    }
+  } finally {
+    mapCongestionKeyDragState.pendingConfirm = false;
+  }
+
+  if (!accepted) {
+    setMapCongestionKeyArmed(false);
+    return;
+  }
+
+  setMapCongestionKeyArmed(true);
+  if (notify && typeof notify.info === 'function') {
+    notify.info('Drag mode armed. Click or touch and drag the congestion key to reposition it.');
+  }
+}
+
+function bindMapCongestionKeyTouchDrag() {
+  if (!mapCongestionKeyDragHandle) return;
+
+  mapCongestionKeyDragHandle.addEventListener('dblclick', function (event) {
+    if (!isCongestionModeEnabled()) return;
+    if (!mapCongestionKeyPanel || mapCongestionKeyPanel.hidden) return;
+    if (mapCongestionKeyDragState.dragging) return;
+    if (event.button !== 0) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    confirmMapCongestionKeyDragArm();
+  });
+
+  mapCongestionKeyDragHandle.addEventListener('pointerdown', function (event) {
+    if (!isCongestionModeEnabled()) return;
+    if (!mapCongestionKeyPanel || mapCongestionKeyPanel.hidden) return;
+    if (mapCongestionKeyDragState.dragging) return;
+
+    if (event.pointerType === 'mouse') {
+      if (event.button !== 0) return;
+      if (!mapCongestionKeyDragState.armed) return;
+      event.preventDefault();
+      event.stopPropagation();
+      startMapCongestionKeyDrag(event);
+      return;
+    }
+
+    if (event.pointerType !== 'touch') return;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (mapCongestionKeyDragState.armed) {
+      startMapCongestionKeyDrag(event);
+      return;
+    }
+
+    const now = Date.now();
+    if (now - mapCongestionKeyDragState.lastTapAt <= TOUCH_DOUBLE_TAP_MS) {
+      mapCongestionKeyDragState.lastTapAt = 0;
+      confirmMapCongestionKeyDragArm();
+      return;
+    }
+
+    mapCongestionKeyDragState.lastTapAt = now;
+  });
+}
+
+function endMapCongestionKeyResize(persist) {
+  mapCongestionKeyResizeState.resizing = false;
+  mapCongestionKeyResizeState.pointerId = null;
+  if (mapCongestionKeyPanel) mapCongestionKeyPanel.classList.remove('resizing');
+
+  document.removeEventListener('pointermove', onMapCongestionKeyResizePointerMove);
+  document.removeEventListener('pointerup', onMapCongestionKeyResizePointerUp);
+  document.removeEventListener('pointercancel', onMapCongestionKeyResizePointerCancel);
+
+  if (persist) {
+    setCongestionMapKeySize({
+      width: mapCongestionKeyResizeState.activeWidth,
+      height: mapCongestionKeyResizeState.activeHeight
+    }, { persist: true });
+    applyMapCongestionKeyPositionClamped({ persist: false });
+    persistState();
+  }
+}
+
+function onMapCongestionKeyResizePointerMove(event) {
+  if (!mapCongestionKeyResizeState.resizing) return;
+  if (event.pointerId !== mapCongestionKeyResizeState.pointerId) return;
+
+  event.preventDefault();
+  event.stopPropagation();
+
+  const zoom = typeof getZoomLevel === 'function'
+    ? Math.max(0.1, Number(getZoomLevel()) || 1)
+    : 1;
+  const dx = (event.clientX - mapCongestionKeyResizeState.startClientX) / zoom;
+  const dy = (event.clientY - mapCongestionKeyResizeState.startClientY) / zoom;
+  const nextSize = clampMapCongestionKeySize({
+    width: mapCongestionKeyResizeState.startWidth + dx,
+    height: mapCongestionKeyResizeState.startHeight + dy
+  });
+
+  mapCongestionKeyResizeState.activeWidth = nextSize.width;
+  mapCongestionKeyResizeState.activeHeight = nextSize.height;
+  setCongestionMapKeySize(nextSize, { persist: false });
+  applyMapCongestionKeyPositionClamped({ persist: false });
+}
+
+function onMapCongestionKeyResizePointerUp(event) {
+  if (!mapCongestionKeyResizeState.resizing) return;
+  if (event.pointerId !== mapCongestionKeyResizeState.pointerId) return;
+
+  event.preventDefault();
+  event.stopPropagation();
+  endMapCongestionKeyResize(true);
+}
+
+function onMapCongestionKeyResizePointerCancel(event) {
+  if (!mapCongestionKeyResizeState.resizing) return;
+  if (event.pointerId !== mapCongestionKeyResizeState.pointerId) return;
+
+  event.preventDefault();
+  event.stopPropagation();
+  endMapCongestionKeyResize(false);
+}
+
+function bindMapCongestionKeyResize() {
+  if (!mapCongestionKeyResizeHandle) return;
+
+  mapCongestionKeyResizeHandle.addEventListener('pointerdown', function (event) {
+    if (!isCongestionModeEnabled()) return;
+    if (!mapCongestionKeyPanel || mapCongestionKeyPanel.hidden) return;
+    if (mapCongestionKeyResizeState.resizing || mapCongestionKeyDragState.dragging) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    const size = applyMapCongestionKeySizeClamped({ persist: false });
+    mapCongestionKeyResizeState.resizing = true;
+    mapCongestionKeyResizeState.pointerId = event.pointerId;
+    mapCongestionKeyResizeState.startClientX = event.clientX;
+    mapCongestionKeyResizeState.startClientY = event.clientY;
+    mapCongestionKeyResizeState.startWidth = size.width;
+    mapCongestionKeyResizeState.startHeight = size.height;
+    mapCongestionKeyResizeState.activeWidth = size.width;
+    mapCongestionKeyResizeState.activeHeight = size.height;
+    mapCongestionKeyPanel.classList.add('resizing');
+
+    if (typeof mapCongestionKeyResizeHandle.setPointerCapture === 'function') {
+      try {
+        mapCongestionKeyResizeHandle.setPointerCapture(event.pointerId);
+      } catch (err) {
+        // ignore capture failures
+      }
+    }
+
+    document.addEventListener('pointermove', onMapCongestionKeyResizePointerMove);
+    document.addEventListener('pointerup', onMapCongestionKeyResizePointerUp);
+    document.addEventListener('pointercancel', onMapCongestionKeyResizePointerCancel);
+  });
 }
 
 function applyBackgroundOpacity() {
@@ -432,6 +886,9 @@ const notifyTools = window.createNotifyTools({ toastContainer });
 const notify = notifyTools.notify;
 
 window.appNotify = notify;
+
+bindMapCongestionKeyTouchDrag();
+bindMapCongestionKeyResize();
 
 function buildVendorLibraryItemsFromTemplates() {
   return appState.vendorTemplates.map((template) => ({

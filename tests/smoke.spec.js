@@ -36,6 +36,7 @@ test.beforeEach(async ({ page }) => {
   await page.evaluate(() => {
     localStorage.clear();
     sessionStorage.clear();
+    localStorage.setItem('fm_first_run_seen', '1');
   });
   await page.evaluate(async () => {
     if (!window.indexedDB) return;
@@ -409,6 +410,206 @@ test('vendor list benchmark helper handles 100+ vendors', async ({ page }) => {
   expect(result.vendorCount).toBe(120);
   expect(result.clusteredCount).toBeGreaterThan(0);
   expect(result.durationMs).toBeGreaterThanOrEqual(0);
+});
+
+test('experimental congestion toggle substitutes clustered labels and shows key', async ({ page }) => {
+  await page.locator('#add-vendor').click();
+  await page.locator('#add-vendor').click();
+
+  const pins = page.locator('.vendor-pin');
+  await expect(pins).toHaveCount(2);
+
+  const firstPin = pins.first();
+  const secondPin = pins.nth(1);
+  const firstStart = await firstPin.boundingBox();
+  const secondStart = await secondPin.boundingBox();
+  expect(firstStart).toBeTruthy();
+  expect(secondStart).toBeTruthy();
+
+  const secondCenterX = secondStart.x + (secondStart.width / 2);
+  const secondCenterY = secondStart.y + (secondStart.height / 2);
+  const firstCenterX = firstStart.x + (firstStart.width / 2);
+  const firstCenterY = firstStart.y + (firstStart.height / 2);
+
+  await page.mouse.move(secondCenterX, secondCenterY);
+  await page.mouse.down();
+  await page.mouse.move(firstCenterX + 6, firstCenterY + 6, { steps: 8 });
+  await page.mouse.up();
+
+  await page.locator('#feature-congestion-toggle').check();
+
+  await expect(firstPin).toHaveClass(/clustered/);
+  await expect(secondPin).toHaveClass(/clustered/);
+  await expect(firstPin).toHaveClass(/congestion-token/);
+  await expect(secondPin).toHaveClass(/congestion-token/);
+
+  await expect(page.locator('#congestion-key-panel')).toBeVisible();
+  await expect(page.locator('#congestion-key-list li')).toHaveCount(2);
+  await expect(page.locator('#congestion-key-list li').first()).not.toHaveText(/^\s*\d+\.\s*\d+\./);
+  await expect(page.locator('#map-congestion-key-panel')).toBeVisible();
+  await expect(page.locator('#map-congestion-key-list li')).toHaveCount(2);
+  await expect(page.locator('#map-congestion-key-list li').first()).not.toHaveText(/^\s*\d+\.\s*\d+\./);
+
+  const mapKeyPanel = page.locator('#map-congestion-key-panel');
+  const mapKeyHandle = page.locator('#map-congestion-key-drag-handle');
+  const mapKeyResizeHandle = page.locator('#map-congestion-key-resize-handle');
+  const beforeDrag = await mapKeyPanel.boundingBox();
+  expect(beforeDrag).toBeTruthy();
+
+  await page.evaluate(() => {
+    const handle = document.getElementById('map-congestion-key-drag-handle');
+    if (!handle) throw new Error('map congestion key drag handle missing');
+    const rect = handle.getBoundingClientRect();
+    const x = rect.left + (rect.width / 2);
+    const y = rect.top + (rect.height / 2);
+
+    function fire(type, pointerId) {
+      handle.dispatchEvent(new PointerEvent(type, {
+        pointerId,
+        pointerType: 'touch',
+        isPrimary: true,
+        bubbles: true,
+        cancelable: true,
+        clientX: x,
+        clientY: y
+      }));
+    }
+
+    fire('pointerdown', 31);
+    fire('pointerup', 31);
+    fire('pointerdown', 32);
+    fire('pointerup', 32);
+  });
+
+  await acceptConfirm(page);
+
+  await page.evaluate(() => {
+    const handle = document.getElementById('map-congestion-key-drag-handle');
+    if (!handle) throw new Error('map congestion key drag handle missing');
+    const rect = handle.getBoundingClientRect();
+    const startX = rect.left + (rect.width / 2);
+    const startY = rect.top + (rect.height / 2);
+    const endX = startX + 110;
+    const endY = startY + 80;
+
+    handle.dispatchEvent(new PointerEvent('pointerdown', {
+      pointerId: 41,
+      pointerType: 'touch',
+      isPrimary: true,
+      bubbles: true,
+      cancelable: true,
+      clientX: startX,
+      clientY: startY
+    }));
+
+    document.dispatchEvent(new PointerEvent('pointermove', {
+      pointerId: 41,
+      pointerType: 'touch',
+      isPrimary: true,
+      bubbles: true,
+      cancelable: true,
+      clientX: endX,
+      clientY: endY
+    }));
+
+    document.dispatchEvent(new PointerEvent('pointerup', {
+      pointerId: 41,
+      pointerType: 'touch',
+      isPrimary: true,
+      bubbles: true,
+      cancelable: true,
+      clientX: endX,
+      clientY: endY
+    }));
+  });
+
+  await expect(mapKeyHandle).toBeVisible();
+  const afterDrag = await mapKeyPanel.boundingBox();
+  expect(afterDrag).toBeTruthy();
+  expect(distance(beforeDrag, afterDrag)).toBeGreaterThan(20);
+
+  await mapKeyHandle.dblclick();
+  await acceptConfirm(page);
+
+  const mouseBeforeDrag = await mapKeyPanel.boundingBox();
+  expect(mouseBeforeDrag).toBeTruthy();
+
+  const mouseStartX = mouseBeforeDrag.x + (mouseBeforeDrag.width / 2);
+  const mouseStartY = mouseBeforeDrag.y + 12;
+  await page.mouse.move(mouseStartX, mouseStartY);
+  await page.mouse.down();
+  await page.mouse.move(mouseStartX + 70, mouseStartY + 50, { steps: 8 });
+  await page.mouse.up();
+
+  const mouseAfterDrag = await mapKeyPanel.boundingBox();
+  expect(mouseAfterDrag).toBeTruthy();
+  expect(distance(mouseBeforeDrag, mouseAfterDrag)).toBeGreaterThan(12);
+
+  await expect(mapKeyResizeHandle).toBeVisible();
+  const beforeResize = await mapKeyPanel.boundingBox();
+  expect(beforeResize).toBeTruthy();
+
+  await page.evaluate(() => {
+    const handle = document.getElementById('map-congestion-key-resize-handle');
+    if (!handle) throw new Error('map congestion key resize handle missing');
+    const rect = handle.getBoundingClientRect();
+    const startX = rect.left + Math.max(4, rect.width - 4);
+    const startY = rect.top + Math.max(4, rect.height - 4);
+    const endX = startX + 90;
+    const endY = startY + 80;
+
+    handle.dispatchEvent(new PointerEvent('pointerdown', {
+      pointerId: 51,
+      pointerType: 'mouse',
+      isPrimary: true,
+      bubbles: true,
+      cancelable: true,
+      button: 0,
+      clientX: startX,
+      clientY: startY
+    }));
+
+    document.dispatchEvent(new PointerEvent('pointermove', {
+      pointerId: 51,
+      pointerType: 'mouse',
+      isPrimary: true,
+      bubbles: true,
+      cancelable: true,
+      button: 0,
+      clientX: endX,
+      clientY: endY
+    }));
+
+    document.dispatchEvent(new PointerEvent('pointerup', {
+      pointerId: 51,
+      pointerType: 'mouse',
+      isPrimary: true,
+      bubbles: true,
+      cancelable: true,
+      button: 0,
+      clientX: endX,
+      clientY: endY
+    }));
+  });
+
+  const afterResize = await mapKeyPanel.boundingBox();
+  expect(afterResize).toBeTruthy();
+  expect(afterResize.width).toBeGreaterThanOrEqual(beforeResize.width);
+  expect(afterResize.height).toBeGreaterThan(beforeResize.height + 25);
+
+  const firstLabel = firstPin.locator('.label');
+  const secondLabel = secondPin.locator('.label');
+  await expect(firstLabel).toHaveText(/^\d+$/);
+  await expect(secondLabel).toHaveText(/^\d+$/);
+
+  await page.locator('#feature-congestion-toggle').uncheck();
+
+  await expect(page.locator('#congestion-key-panel')).toBeHidden();
+  await expect(page.locator('#map-congestion-key-panel')).toBeHidden();
+  await expect(firstPin).not.toHaveClass(/congestion-token/);
+  await expect(secondPin).not.toHaveClass(/congestion-token/);
+  await expect(firstLabel).toContainText('Vendor');
+  await expect(secondLabel).toContainText('Vendor');
 });
 
 test('invalid snapshot map payload is rejected without overwriting state', async ({ page }) => {

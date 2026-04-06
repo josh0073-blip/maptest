@@ -251,6 +251,13 @@
     <main class="map-area" id="mapArea">
       <div class="map-content" id="mapContent">
         <div id="mapTitle" class="map-title" contenteditable="true" spellcheck="false">Farmers Market Vendor Map</div>
+        <div id="map-congestion-key-panel" class="map-congestion-key-panel" hidden>
+          <button id="map-congestion-key-drag-handle" class="map-congestion-key-drag-handle" type="button" title="Double-tap or double-click to enable drag">
+            Vendor Key
+          </button>
+          <ol id="map-congestion-key-list" class="congestion-key-list"></ol>
+          <button id="map-congestion-key-resize-handle" class="map-congestion-key-resize-handle" type="button" aria-label="Resize congestion key" title="Drag to resize congestion key"></button>
+        </div>
         <div class="map-overlay" id="mapOverlay"></div>
         <div id="pinsContainer" class="pins-container"></div>
       </div>
