@@ -4,6 +4,8 @@
     const vendorList = options.vendorList;
     const congestionKeyPanel = options.congestionKeyPanel || null;
     const congestionKeyList = options.congestionKeyList || null;
+    const mapCongestionKeyPanel = options.mapCongestionKeyPanel || null;
+    const mapCongestionKeyList = options.mapCongestionKeyList || null;
     const isCongestionModeEnabled = options.isCongestionModeEnabled || function () { return false; };
     const getVendors = options.getVendors;
     const getVendorCategories = options.getVendorCategories || function () { return []; };
@@ -29,20 +31,28 @@
       });
     }
 
-    function renderCongestionKey(entries) {
-      if (!congestionKeyPanel || !congestionKeyList) return;
-      congestionKeyList.innerHTML = '';
+    function renderCongestionKeyInto(panel, list, entries) {
+      if (!panel || !list) return;
+      list.innerHTML = '';
       if (!isCongestionModeEnabled() || !entries.length) {
-        congestionKeyPanel.hidden = true;
+        panel.hidden = true;
         return;
       }
 
       entries.forEach(function (entry) {
         const item = document.createElement('li');
-        item.textContent = entry.token + '. ' + entry.name;
-        congestionKeyList.append(item);
+        const name = String(entry.name || 'Vendor');
+        const duplicatePrefix = new RegExp('^' + entry.token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\.\\s+');
+        const displayName = name.replace(duplicatePrefix, '');
+        item.textContent = displayName;
+        list.append(item);
       });
-      congestionKeyPanel.hidden = false;
+      panel.hidden = false;
+    }
+
+    function renderCongestionKey(entries) {
+      renderCongestionKeyInto(congestionKeyPanel, congestionKeyList, entries);
+      renderCongestionKeyInto(mapCongestionKeyPanel, mapCongestionKeyList, entries);
     }
 
     function applyCongestionTokens(entries, pinsById, vendors) {
@@ -78,10 +88,10 @@
     function refreshClusterState(vendors, container, scale) {
       const rawScale = Number(scale);
       const safeScale = Number.isFinite(rawScale) && rawScale > 0 ? rawScale : 1;
-      const threshold = Math.min(140, Math.max(20, 70 / safeScale));
-      const thresholdSquared = threshold * threshold;
-      const cellSize = threshold;
-      const cellMap = new Map();
+      const thresholdX = Math.min(180, Math.max(28, 95 / safeScale));
+      const verticalCompression = 0.15;
+      const minVerticalHalfExtent = 6 / safeScale;
+      const horizontalInflation = 8 / safeScale;
       const pinsById = new Map();
 
       if (container) {
@@ -91,39 +101,79 @@
         });
       }
 
-      vendors.forEach(function (vendor, index) {
-        vendor.clustered = false;
+      function buildCollisionGeometry(vendor) {
+        const pin = pinsById.get(Number(vendor.id));
+        const baseWidth = Math.max(64, Number(pin && pin.offsetWidth) || 0);
+        const baseHeight = Math.max(26, Number(pin && pin.offsetHeight) || 0);
+        const size = Math.max(0.5, Number(vendor.size) || 1);
+        const height = Math.max(0.5, Number(vendor.height) || 1);
+        const rotationDeg = Number(vendor.rotation) || 0;
+        const rotation = (rotationDeg * Math.PI) / 180;
+        const cos = Math.cos(rotation);
+        const sin = Math.sin(rotation);
 
-        const cellX = Math.floor((Number(vendor.x) || 0) / cellSize);
-        const cellY = Math.floor((Number(vendor.y) || 0) / cellSize);
-        const key = cellX + ':' + cellY;
-        if (!cellMap.has(key)) cellMap.set(key, []);
-        cellMap.get(key).push({ vendor: vendor, index: index, x: Number(vendor.x) || 0, y: Number(vendor.y) || 0, cellX: cellX, cellY: cellY });
+        const fullWidth = (baseWidth * size) / safeScale;
+        const fullHeight = (baseHeight * size * height) / safeScale;
+        const halfWidth = (fullWidth / 2) + horizontalInflation;
+        const halfHeight = Math.max((fullHeight * verticalCompression) / 2, minVerticalHalfExtent);
+
+        const originX = Number(vendor.x) || 0;
+        const originY = Number(vendor.y) || 0;
+        const ux = { x: cos, y: sin };
+        const uy = { x: -sin, y: cos };
+
+        // Pin transforms rotate around the top-left corner, so center must be projected from origin.
+        const centerX = originX + (ux.x * (fullWidth / 2)) + (uy.x * (fullHeight / 2));
+        const centerY = originY + (ux.y * (fullWidth / 2)) + (uy.y * (fullHeight / 2));
+
+        return {
+          centerX: centerX,
+          centerY: centerY,
+          halfWidth: halfWidth,
+          halfHeight: halfHeight,
+          ux: ux,
+          uy: uy
+        };
+      }
+
+      function hasProjectedOverlap(axis, a, b) {
+        const axisLength = Math.hypot(axis.x, axis.y) || 1;
+        const nx = axis.x / axisLength;
+        const ny = axis.y / axisLength;
+
+        const centerDelta = Math.abs(((b.centerX - a.centerX) * nx) + ((b.centerY - a.centerY) * ny));
+        const radiusA =
+          (a.halfWidth * Math.abs((a.ux.x * nx) + (a.ux.y * ny))) +
+          (a.halfHeight * Math.abs((a.uy.x * nx) + (a.uy.y * ny)));
+        const radiusB =
+          (b.halfWidth * Math.abs((b.ux.x * nx) + (b.ux.y * ny))) +
+          (b.halfHeight * Math.abs((b.uy.x * nx) + (b.uy.y * ny)));
+
+        return centerDelta <= (radiusA + radiusB);
+      }
+
+      function intersectsOrientedBoxes(a, b) {
+        return (
+          hasProjectedOverlap(a.ux, a, b) &&
+          hasProjectedOverlap(a.uy, a, b) &&
+          hasProjectedOverlap(b.ux, a, b) &&
+          hasProjectedOverlap(b.uy, a, b)
+        );
+      }
+
+      const geometries = vendors.map(function (vendor) {
+        vendor.clustered = false;
+        return buildCollisionGeometry(vendor);
       });
 
-      vendors.forEach(function (vendor, index) {
-        const cellX = Math.floor((Number(vendor.x) || 0) / cellSize);
-        const cellY = Math.floor((Number(vendor.y) || 0) / cellSize);
-
-        for (let offsetX = -1; offsetX <= 1; offsetX++) {
-          for (let offsetY = -1; offsetY <= 1; offsetY++) {
-            const neighborKey = (cellX + offsetX) + ':' + (cellY + offsetY);
-            const bucket = cellMap.get(neighborKey);
-            if (!bucket) continue;
-
-            for (let i = 0; i < bucket.length; i++) {
-              const other = bucket[i];
-              if (other.index <= index) continue;
-              const dx = (vendor.x || 0) - other.x;
-              const dy = (vendor.y || 0) - other.y;
-              if ((dx * dx) + (dy * dy) < thresholdSquared) {
-                vendor.clustered = true;
-                other.vendor.clustered = true;
-              }
-            }
+      for (let i = 0; i < vendors.length; i++) {
+        for (let j = i + 1; j < vendors.length; j++) {
+          if (intersectsOrientedBoxes(geometries[i], geometries[j])) {
+            vendors[i].clustered = true;
+            vendors[j].clustered = true;
           }
         }
-      });
+      }
 
       vendors.forEach(function (vendor) {
         const pin = pinsById.get(vendor.id) || null;
@@ -136,19 +186,74 @@
       applyCongestionTokens(congestionEntries, pinsById, vendors);
 
       return {
-        threshold: threshold,
+        threshold: thresholdX,
+        thresholdX: thresholdX,
+        thresholdY: thresholdX * verticalCompression,
         clusteredCount: vendors.filter(function (vendor) { return !!vendor.clustered; }).length
       };
     }
 
     function updateClusters() {
       const vendors = getVendors();
+      if (!isCongestionModeEnabled()) {
+        // Clear any residual clustered/token state for stability when feature is disabled
+        const pinsById = new Map();
+        if (pinsContainer) {
+          pinsContainer.querySelectorAll('.vendor-pin').forEach(function (pin) {
+            const pid = Number(pin.dataset.id);
+            if (Number.isFinite(pid)) pinsById.set(pid, pin);
+            pin.classList.remove('clustered');
+            pin.classList.remove('congestion-token');
+            pin.removeAttribute('aria-label');
+            delete pin.dataset.congestionToken;
+          });
+        }
+        // Restore original labels via applyCongestionTokens with empty entries
+        try {
+          applyCongestionTokens([], pinsById, vendors);
+        } catch (err) {
+          // defensive: fallback to manual label restore
+          if (pinsById.size) {
+            pinsById.forEach(function (pin, id) {
+              const label = pin.querySelector('.label');
+              if (!label || label.isContentEditable) return;
+              const vendor = vendors.find(function (v) { return Number(v.id) === Number(id); });
+              if (vendor) label.textContent = String(vendor.name || 'Vendor');
+            });
+          }
+        }
+        // Ensure congestion key UI is hidden
+        renderCongestionKey([]);
+        return;
+      }
+
       refreshClusterState(vendors, pinsContainer, getBackgroundScale());
     }
 
     function updateVendorList() {
       const vendors = getVendors();
-      refreshClusterState(vendors, pinsContainer, getBackgroundScale());
+      if (isCongestionModeEnabled()) {
+        refreshClusterState(vendors, pinsContainer, getBackgroundScale());
+      } else {
+        // When disabled, ensure list rendering still shows vendor items without clustering markers
+        const pinsById = new Map();
+        if (pinsContainer) {
+          pinsContainer.querySelectorAll('.vendor-pin').forEach(function (pin) {
+            const pid = Number(pin.dataset.id);
+            if (Number.isFinite(pid)) pinsById.set(pid, pin);
+            pin.classList.remove('clustered');
+            pin.classList.remove('congestion-token');
+            pin.removeAttribute('aria-label');
+            delete pin.dataset.congestionToken;
+          });
+        }
+        try {
+          applyCongestionTokens([], pinsById, vendors);
+        } catch (err) {
+          // ignore
+        }
+        renderCongestionKey([]);
+      }
       vendorList.innerHTML = '';
       const categoryById = new Map(getVendorCategories().map(function (category) {
         return [category.id, category.name];
