@@ -88,8 +88,6 @@
       const query = normalizeTag(searchInput && searchInput.value);
       const fromValue = dateFromInput && dateFromInput.value;
       const toValue = dateToInput && dateToInput.value;
-      const fromDate = fromValue ? new Date(`${fromValue}T00:00:00`) : null;
-      const toDate = toValue ? new Date(`${toValue}T23:59:59.999`) : null;
 
       return library.filter((entry) => {
         if (query) {
@@ -97,10 +95,12 @@
           if (!haystack.includes(query)) return false;
         }
 
-        if (fromDate || toDate) {
-          const createdDate = new Date(entry.createdAt || Date.now());
-          if (fromDate && createdDate < fromDate) return false;
-          if (toDate && createdDate > toDate) return false;
+        // Date filtering: compare ISO date strings (YYYY-MM-DD) to avoid
+        // timezone-related mismatches when using Date objects.
+        if (fromValue || toValue) {
+          const createdDateStr = (entry.createdAt || '').slice(0, 10);
+          if (fromValue && createdDateStr < fromValue) return false;
+          if (toValue && createdDateStr > toValue) return false;
         }
 
         return true;
