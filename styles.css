@@ -622,16 +622,16 @@ body {
 
 .vendor-pin.status-standby {
   background: #fef08acc;
-  border-top-color: #a16207;
-  border-right-color: #a16207;
-  border-bottom-color: #a16207;
+  border-top-color: #a16207 !important;
+  border-right-color: #a16207 !important;
+  border-bottom-color: #a16207 !important;
 }
 
 .vendor-pin.status-alert {
   background: #fecaca;
-  border-top-color: #991b1b;
-  border-right-color: #991b1b;
-  border-bottom-color: #991b1b;
+  border-top-color: #991b1b !important;
+  border-right-color: #991b1b !important;
+  border-bottom-color: #991b1b !important;
 }
 
 .vendor-pin.clustered {

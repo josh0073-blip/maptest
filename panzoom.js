@@ -10,6 +10,11 @@
     let isPanningMap = false;
     let activePointerId = null;
     let panStart = { x: 0, y: 0 };
+    // Track active touch pointers for pinch-to-zoom
+    const activePointers = new Map(); // pointerId -> { clientX, clientY }
+    let pinchStartDistance = 0;
+    let pinchStartZoom = 1;
+    let pinchMidpoint = null;
 
     function applyZoomPan() {
       mapContent.style.transform = 'translate(' + pan.x + 'px, ' + pan.y + 'px) scale(' + zoomLevel + ')';
@@ -44,6 +49,12 @@
       });
 
       mapArea.addEventListener('pointerdown', (event) => {
+        // Track touch pointers for pinch gestures
+        if (event.pointerType === 'touch') {
+          activePointers.set(event.pointerId, { clientX: event.clientX, clientY: event.clientY });
+        }
+        // Preserve original behavior: ignore mouse pointerdown here so
+        // `mousedown` still controls mouse panning (right-click/alt).
         if (event.pointerType === 'mouse') return;
         if (event.target && event.target.closest && event.target.closest('.vendor-pin')) return;
         if (event.target && (event.target.isContentEditable || event.target.closest('input, textarea, select, button'))) return;
@@ -62,6 +73,15 @@
         event.preventDefault();
       });
 
+      // Pointer move should also update active touch pointers
+      mapArea.addEventListener('pointermove', (event) => {
+        if (event.pointerType === 'touch') {
+          if (activePointers.has(event.pointerId)) {
+            activePointers.set(event.pointerId, { clientX: event.clientX, clientY: event.clientY });
+          }
+        }
+      });
+
       document.addEventListener('mousemove', (event) => {
         if (!isPanningMap) return;
         pan.x = event.clientX - panStart.x;
@@ -70,6 +90,52 @@
       });
 
       document.addEventListener('pointermove', (event) => {
+        // Handle pinch-to-zoom when two touch pointers are active
+        if (event.pointerType === 'touch' && activePointers.size >= 2) {
+          // ensure the latest coordinates are recorded
+          if (activePointers.has(event.pointerId)) {
+            activePointers.set(event.pointerId, { clientX: event.clientX, clientY: event.clientY });
+          }
+
+          const pts = Array.from(activePointers.values()).slice(0, 2);
+          const dx = pts[0].clientX - pts[1].clientX;
+          const dy = pts[0].clientY - pts[1].clientY;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+
+          if (!pinchStartDistance) {
+            pinchStartDistance = distance || 0.0001;
+            pinchStartZoom = zoomLevel;
+            pinchMidpoint = {
+              x: (pts[0].clientX + pts[1].clientX) / 2,
+              y: (pts[0].clientY + pts[1].clientY) / 2
+            };
+          } else {
+            const scaleFactor = distance / Math.max(0.0001, pinchStartDistance);
+            const nextZoom = Math.min(2.5, Math.max(0.1, pinchStartZoom * scaleFactor));
+
+            // adjust pan so the midpoint remains fixed relative to content
+            const beforeZoom = zoomLevel;
+            const mapRect = mapContent.getBoundingClientRect();
+            const midClientX = pinchMidpoint.x;
+            const midClientY = pinchMidpoint.y;
+
+            // content coordinates of midpoint before change
+            const contentX = (midClientX - mapRect.left - pan.x) / beforeZoom;
+            const contentY = (midClientY - mapRect.top - pan.y) / beforeZoom;
+
+            zoomLevel = nextZoom;
+
+            // compute new pan so contentX/contentY maps back to same client coords
+            pan.x = midClientX - mapRect.left - contentX * zoomLevel;
+            pan.y = midClientY - mapRect.top - contentY * zoomLevel;
+            applyZoomPan();
+          }
+
+          event.preventDefault();
+          return;
+        }
+
+        // regular touch panning
         if (!isPanningMap) return;
         if (event.pointerType === 'mouse') return;
         if (activePointerId !== null && event.pointerId !== activePointerId) return;
@@ -93,6 +159,15 @@
         isPanningMap = false;
         activePointerId = null;
         mapArea.classList.remove('grabbing');
+        // remove pointer from activePointers and reset pinch state if needed
+        if (event.pointerType === 'touch') {
+          activePointers.delete(event.pointerId);
+          if (activePointers.size < 2) {
+            pinchStartDistance = 0;
+            pinchStartZoom = zoomLevel;
+            pinchMidpoint = null;
+          }
+        }
       });
 
       document.addEventListener('pointercancel', (event) => {
@@ -102,7 +177,32 @@
         isPanningMap = false;
         activePointerId = null;
         mapArea.classList.remove('grabbing');
+        if (event.pointerType === 'touch') {
+          activePointers.delete(event.pointerId);
+          if (activePointers.size < 2) {
+            pinchStartDistance = 0;
+            pinchStartZoom = zoomLevel;
+            pinchMidpoint = null;
+          }
+        }
       });
+
+      // Always clean up any tracked active touch pointers on pointerup/cancel,
+      // even when the map is not in panning state, to avoid stale entries.
+      function cleanupTrackedPointer(event) {
+        if (!event || event.pointerType !== 'touch') return;
+        if (activePointers.has(event.pointerId)) {
+          activePointers.delete(event.pointerId);
+        }
+        if (activePointers.size < 2) {
+          pinchStartDistance = 0;
+          pinchStartZoom = zoomLevel;
+          pinchMidpoint = null;
+        }
+      }
+
+      document.addEventListener('pointerup', cleanupTrackedPointer);
+      document.addEventListener('pointercancel', cleanupTrackedPointer);
 
       mapArea.addEventListener('contextmenu', (event) => {
         event.preventDefault();

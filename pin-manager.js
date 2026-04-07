@@ -16,6 +16,7 @@
     const sanitizeText = typeof window.sanitizeEditableText === 'function'
       ? window.sanitizeEditableText
       : function (value, fallback) { return String(value || '').trim() || String(fallback || ''); };
+    const animatePin = settings.animatePin;
 
     let maxZIndex = 1;
 
@@ -188,8 +189,59 @@
       applyPinPosition(vendor, pin);
       applyPinTransform(vendor, pin);
 
+      // Pending drag helpers (to avoid stealing double-clicks on labels)
+      let pendingDrag = null;
+
+      function clearPendingDrag() {
+        if (!pendingDrag) return;
+        document.removeEventListener('pointermove', pendingDrag.moveHandler);
+        document.removeEventListener('pointerup', pendingDrag.upHandler);
+        pendingDrag = null;
+      }
+
       pin.addEventListener('pointerdown', (event) => {
-        if (event.target.closest('button') || event.target.closest('.label')) return;
+        // Never start drag when clicking controls
+        if (event.target.closest('button')) return;
+
+        const clickedLabel = event.target.closest('.label');
+
+        // If clicking the label, defer starting a drag until the pointer
+        // moves a bit. This preserves double-click-to-edit behavior.
+        if (clickedLabel) {
+          if (clickedLabel.isContentEditable) return;
+
+          const startX = event.clientX;
+          const startY = event.clientY;
+          const pointerId = typeof event.pointerId === 'number' ? event.pointerId : null;
+
+          function onMoveForPending(e) {
+            if (pointerId !== null && e.pointerId !== pointerId) return;
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
+            if (Math.sqrt(dx * dx + dy * dy) >= 6) {
+              clearPendingDrag();
+              // Start an actual drag using the current move event
+              event.stopPropagation();
+              startDrag(e, pin, vendor);
+            }
+          }
+
+          function onUpForPending(e) {
+            if (pointerId !== null && e.pointerId !== pointerId) return;
+            clearPendingDrag();
+          }
+
+          clearPendingDrag();
+          pendingDrag = {
+            moveHandler: onMoveForPending,
+            upHandler: onUpForPending
+          };
+          document.addEventListener('pointermove', onMoveForPending, { passive: false });
+          document.addEventListener('pointerup', onUpForPending);
+          return;
+        }
+
+        // Clicking elsewhere on the pin should start drag immediately
         event.stopPropagation();
         startDrag(event, pin, vendor);
       });
@@ -203,6 +255,14 @@
       });
 
       pinsContainer.appendChild(pin);
+      // Visually highlight newly-created pins if animation helper is available
+      try {
+        if (typeof animatePin === 'function') {
+          animatePin(pin);
+        }
+        // Ensure pin is focusable so keyboard users can find it
+        try { pin.tabIndex = -1; pin.focus(); } catch (e) { /* ignore */ }
+      } catch (e) { /* ignore */ }
       updateClusters();
       return { pin, vendor, label };
     }
