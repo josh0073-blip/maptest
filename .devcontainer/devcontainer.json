@@ -1,0 +1,28 @@
+{
+  "name": "farmers-market-map-dev",
+  "image": "mcr.microsoft.com/playwright:v1.59.1-noble",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-playwright.playwright",
+        "dbaeumer.vscode-eslint"
+      ]
+    }
+  },
+  "mounts": [
+    "source=fm-node-modules,target=${containerWorkspaceFolder}/node_modules,type=volume",
+    "source=fm-npm-cache,target=/home/pwuser/.npm,type=volume",
+    "source=fm-playwright-cache,target=/ms-playwright,type=volume"
+  ],
+  "forwardPorts": [5500, 9323],
+  "portsAttributes": {
+    "5500": {
+      "label": "Live Server"
+    },
+    "9323": {
+      "label": "Playwright Report"
+    }
+  },
+  "postCreateCommand": "npm install",
+  "remoteUser": "pwuser"
+}
