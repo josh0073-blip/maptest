@@ -1,0 +1,26 @@
+name: Benchmark - Vendor Clustering
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Run node benchmark
+        run: |
+          node scripts/run-benchmark-node.js > benchmark-output.json
+          cat benchmark-output.json
+      - name: Upload benchmark artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vendor-benchmark
+          path: benchmark-output.json

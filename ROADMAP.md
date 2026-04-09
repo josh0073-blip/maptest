@@ -123,6 +123,12 @@ Potential extraction candidates:
 2. Snapshot/archive orchestration from `script.js`
 3. App bootstrap/runtime setup validator for dependency safety
 
+## Deployment
+- [x] Set up GitHub Pages deployment workflow.
+- [x] Update `vite.config.js` for GitHub Pages compatibility.
+- [x] Add `.github/workflows/gh-pages.yml` for automated deployment.
+- [ ] Verify deployment on GitHub Pages.
+
 ## Recent Progress
 
 - Manual pins now create linked template entries and stay synchronized when pin labels are edited.

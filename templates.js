@@ -161,8 +161,8 @@
       if (status) {
         const existing = getVendors().find((v) => v.templateId === templateId);
         if (!existing) {
-          const vendorCount = getVendors().length;
-          addVendor({ name: template.name, x: 80 + vendorCount * 20, y: 80 + vendorCount * 20, templateId: templateId });
+          // Let the central addVendorRecord compute a viewport-relative spawn
+          addVendor({ name: template.name, templateId: templateId });
         }
       } else {
         const existing = getVendors().find((v) => v.templateId === templateId);

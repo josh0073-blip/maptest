@@ -166,11 +166,39 @@
         return buildCollisionGeometry(vendor);
       });
 
-      for (let i = 0; i < vendors.length; i++) {
-        for (let j = i + 1; j < vendors.length; j++) {
-          if (intersectsOrientedBoxes(geometries[i], geometries[j])) {
-            vendors[i].clustered = true;
-            vendors[j].clustered = true;
+      // Spatial bucketing to reduce pairwise intersection checks
+      // Use a grid where cell size is based on the clustering threshold.
+      const cellSize = Math.max(1, thresholdX * 2);
+      const buckets = new Map();
+      function bucketKey(ix, iy) { return ix + ',' + iy; }
+
+      geometries.forEach(function (g, idx) {
+        const ix = Math.floor(g.centerX / cellSize);
+        const iy = Math.floor(g.centerY / cellSize);
+        const key = bucketKey(ix, iy);
+        if (!buckets.has(key)) buckets.set(key, []);
+        buckets.get(key).push(idx);
+      });
+
+      for (let i = 0; i < geometries.length; i++) {
+        const g = geometries[i];
+        const ix = Math.floor(g.centerX / cellSize);
+        const iy = Math.floor(g.centerY / cellSize);
+
+        // Only compare against items in the same cell and adjacent cells
+        for (let dx = -1; dx <= 1; dx++) {
+          for (let dy = -1; dy <= 1; dy++) {
+            const neighborKey = bucketKey(ix + dx, iy + dy);
+            const indices = buckets.get(neighborKey);
+            if (!indices) continue;
+            for (let k = 0; k < indices.length; k++) {
+              const j = indices[k];
+              if (j <= i) continue; // avoid duplicate checks
+              if (intersectsOrientedBoxes(geometries[i], geometries[j])) {
+                vendors[i].clustered = true;
+                vendors[j].clustered = true;
+              }
+            }
           }
         }
       }

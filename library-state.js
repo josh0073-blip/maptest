@@ -1,5 +1,103 @@
 (function () {
   const STORAGE_KEY = 'farmersMarketLibraries';
+  const SEED_VERSION_STORAGE_KEY = 'farmersMarketLibrarySeedVersion';
+  const SEED_VERSION = 7;
+
+  // Replaced by Vite plugin at build/dev time.
+  const BOOTSTRAP_BACKGROUND_FILES = typeof __BOOTSTRAP_BACKGROUND_FILES__ !== 'undefined' ? __BOOTSTRAP_BACKGROUND_FILES__ : [];
+  const BOOTSTRAP_VENDOR_LIST_FILES = typeof __BOOTSTRAP_VENDOR_LIST_FILES__ !== 'undefined' ? __BOOTSTRAP_VENDOR_LIST_FILES__ : [];
+
+  function svgToDataUrl(svgText) {
+    return 'data:image/svg+xml;base64,' + window.btoa(svgText);
+  }
+
+  function formatSeedNameFromFile(filename) {
+    const base = String(filename || '')
+      .replace(/\.[^/.]+$/, '')
+      .replace(/[_-]+/g, ' ')
+      .trim();
+    if (!base) return 'Background';
+    return base.replace(/\b\w/g, function (char) { return char.toUpperCase(); });
+  }
+
+  function makeSeedIdFromFile(filename) {
+    return 'seed-bg-folder-' + String(filename || '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+  }
+
+  function makeVendorListSeedIdFromFile(filename) {
+    return 'seed-vl-folder-' + String(filename || '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+  }
+
+  const BOOTSTRAP_BACKGROUND_SEEDS = [].concat(
+    (Array.isArray(BOOTSTRAP_BACKGROUND_FILES) ? BOOTSTRAP_BACKGROUND_FILES : []).map(function (filename) {
+      return {
+        id: makeSeedIdFromFile(filename),
+        name: formatSeedNameFromFile(filename),
+        sourceType: 'url',
+        backgroundUrl: '/bootstrap-backgrounds/' + filename
+      };
+    })
+  );
+
+  const BOOTSTRAP_VENDOR_LIST_SEEDS = [].concat(
+    (Array.isArray(BOOTSTRAP_VENDOR_LIST_FILES) ? BOOTSTRAP_VENDOR_LIST_FILES : []).map(function (file) {
+      const filename = String(file && file.filename || '').trim();
+      const csvText = String(file && file.content || '');
+      return {
+        id: makeVendorListSeedIdFromFile(filename),
+        name: formatSeedNameFromFile(filename),
+        csvText: csvText
+      };
+    })
+  );
+
+  let bootstrapDiagnosticsWarned = false;
+
+  function getBootstrapDiagnostics() {
+    const backgroundCount = Array.isArray(BOOTSTRAP_BACKGROUND_FILES) ? BOOTSTRAP_BACKGROUND_FILES.length : 0;
+    const vendorListCount = Array.isArray(BOOTSTRAP_VENDOR_LIST_FILES) ? BOOTSTRAP_VENDOR_LIST_FILES.length : 0;
+    const issues = [];
+
+    if (backgroundCount === 0) {
+      issues.push('No bootstrap background images were found in public/bootstrap-backgrounds.');
+    }
+
+    if (vendorListCount === 0) {
+      issues.push('No bootstrap vendor list CSV files were found in public/bootstrap-vendor-lists.');
+    }
+
+    return {
+      backgroundCount: backgroundCount,
+      vendorListCount: vendorListCount,
+      issues: issues,
+      healthy: issues.length === 0
+    };
+  }
+
+  function reportBootstrapDiagnostics(notify) {
+    const diagnostics = getBootstrapDiagnostics();
+    if (diagnostics.healthy || bootstrapDiagnosticsWarned) {
+      return diagnostics;
+    }
+
+    bootstrapDiagnosticsWarned = true;
+    const runtimeNotifier = notify || window.appNotify;
+    const message = 'Bootstrap assets are missing. ' + diagnostics.issues.join(' ') + ' Offline defaults may be incomplete.';
+
+    if (runtimeNotifier && typeof runtimeNotifier.warn === 'function') {
+      runtimeNotifier.warn(message);
+      return diagnostics;
+    }
+
+    console.warn(message);
+    return diagnostics;
+  }
 
   function makeId(prefix) {
     return prefix + '_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
@@ -50,13 +148,33 @@
 
   function normalizeLibraryState(raw) {
     const safe = raw && typeof raw === 'object' ? raw : {};
-    const backgroundLibrary = (Array.isArray(safe.backgroundLibrary) ? safe.backgroundLibrary : [])
+    const normalizedBackgroundLibrary = (Array.isArray(safe.backgroundLibrary) ? safe.backgroundLibrary : [])
       .map(normalizeBackgroundEntry)
       .filter(Boolean);
 
-    const vendorListLibrary = (Array.isArray(safe.vendorListLibrary) ? safe.vendorListLibrary : [])
+    // Canonicalize by id first (last value wins), then remove duplicate URLs.
+    const backgroundById = new Map();
+    normalizedBackgroundLibrary.forEach(function (entry) {
+      backgroundById.set(entry.id, entry);
+    });
+    const seenBackgroundUrls = new Set();
+    const backgroundLibrary = [];
+    backgroundById.forEach(function (entry) {
+      if (seenBackgroundUrls.has(entry.backgroundUrl)) return;
+      seenBackgroundUrls.add(entry.backgroundUrl);
+      backgroundLibrary.push(entry);
+    });
+
+    const normalizedVendorListLibrary = (Array.isArray(safe.vendorListLibrary) ? safe.vendorListLibrary : [])
       .map(normalizeVendorLibraryEntry)
       .filter(Boolean);
+
+    // Canonicalize vendor list entries by id (last value wins).
+    const vendorById = new Map();
+    normalizedVendorListLibrary.forEach(function (entry) {
+      vendorById.set(entry.id, entry);
+    });
+    const vendorListLibrary = Array.from(vendorById.values());
 
     return {
       schemaVersion: 1,
@@ -68,6 +186,178 @@
   function createLibraryStateTools() {
     let state = normalizeLibraryState(null);
     let storageWarningShown = false;
+
+    function getSeedVersion() {
+      try {
+        const raw = localStorage.getItem(SEED_VERSION_STORAGE_KEY);
+        const version = Number(raw);
+        return Number.isFinite(version) ? version : 0;
+      } catch (err) {
+        return 0;
+      }
+    }
+
+    function setSeedVersion(version) {
+      try {
+        localStorage.setItem(SEED_VERSION_STORAGE_KEY, String(version));
+      } catch (err) {
+        warnStorageIssue('Failed updating seed version in localStorage.', err);
+      }
+    }
+
+    function signatureForVendorList(items) {
+      return JSON.stringify((Array.isArray(items) ? items : []).map(function (item) {
+        return String(item && item.name || '').trim().toLowerCase();
+      }).sort());
+    }
+
+    function isSeedBackgroundId(id) {
+      return /^seed-bg-/.test(String(id || ''));
+    }
+
+    function isSeedVendorListId(id) {
+      return /^seed-vl-/.test(String(id || ''));
+    }
+
+    function buildVendorItemsFromSeed(seed) {
+      if (!seed || typeof seed !== 'object') return [];
+      if (typeof seed.csvText === 'string') {
+        return parseCsvItems(seed.csvText);
+      }
+      if (!Array.isArray(seed.items)) return [];
+      return seed.items.map(function (item) {
+        return {
+          name: String(item && item.name || '').trim(),
+          active: !!(item && item.active)
+        };
+      }).filter(function (item) {
+        return !!item.name;
+      });
+    }
+
+    function applyBootstrapSeeds() {
+      const now = new Date().toISOString();
+      const existingBackgroundById = new Map(state.backgroundLibrary.map(function (entry) {
+        return [entry.id, entry];
+      }));
+      const existingBackgroundUrls = new Set(state.backgroundLibrary.map(function (entry) { return entry.backgroundUrl; }));
+      const existingVendorListById = new Map(state.vendorListLibrary.map(function (entry) {
+        return [entry.id, entry];
+      }));
+      const existingVendorListSignatures = new Set(state.vendorListLibrary.map(function (entry) {
+        return signatureForVendorList(entry.items);
+      }));
+
+      let changed = false;
+
+      // Keep folder-seeded entries in sync with current file scan results.
+      const activeBootstrapBackgroundIds = new Set(BOOTSTRAP_BACKGROUND_SEEDS.map(function (seed) {
+        return seed.id;
+      }));
+      const beforeBackgroundCount = state.backgroundLibrary.length;
+      state.backgroundLibrary = state.backgroundLibrary.filter(function (entry) {
+        if (!isSeedBackgroundId(entry.id)) return true;
+        return activeBootstrapBackgroundIds.has(entry.id);
+      });
+      if (state.backgroundLibrary.length !== beforeBackgroundCount) {
+        changed = true;
+      }
+
+      const activeBootstrapVendorListIds = new Set(BOOTSTRAP_VENDOR_LIST_SEEDS.map(function (seed) {
+        return seed.id;
+      }));
+      const beforeVendorListCount = state.vendorListLibrary.length;
+      state.vendorListLibrary = state.vendorListLibrary.filter(function (entry) {
+        if (!isSeedVendorListId(entry.id)) return true;
+        return activeBootstrapVendorListIds.has(entry.id);
+      });
+      if (state.vendorListLibrary.length !== beforeVendorListCount) {
+        changed = true;
+      }
+
+      // Rebuild maps after potential removals.
+      existingBackgroundById.clear();
+      existingBackgroundUrls.clear();
+      state.backgroundLibrary.forEach(function (entry) {
+        existingBackgroundById.set(entry.id, entry);
+        existingBackgroundUrls.add(entry.backgroundUrl);
+      });
+      existingVendorListById.clear();
+      existingVendorListSignatures.clear();
+      state.vendorListLibrary.forEach(function (entry) {
+        existingVendorListById.set(entry.id, entry);
+        existingVendorListSignatures.add(signatureForVendorList(entry.items));
+      });
+
+      BOOTSTRAP_BACKGROUND_SEEDS.forEach(function (seed) {
+        const existingById = existingBackgroundById.get(seed.id);
+        if (existingById) {
+          const nextSourceType = seed.sourceType === 'fileData' ? 'fileData' : 'url';
+          if (
+            existingById.name !== seed.name ||
+            existingById.sourceType !== nextSourceType ||
+            existingById.backgroundUrl !== seed.backgroundUrl
+          ) {
+            existingById.name = seed.name;
+            existingById.sourceType = nextSourceType;
+            existingById.backgroundUrl = seed.backgroundUrl;
+            existingById.lastUsedAt = now;
+            changed = true;
+          }
+          existingBackgroundUrls.add(seed.backgroundUrl);
+          return;
+        }
+
+        if (existingBackgroundUrls.has(seed.backgroundUrl)) return;
+        const nextEntry = {
+          id: seed.id,
+          name: seed.name,
+          sourceType: seed.sourceType,
+          backgroundUrl: seed.backgroundUrl,
+          createdAt: now,
+          lastUsedAt: now
+        };
+        state.backgroundLibrary.push(nextEntry);
+        existingBackgroundById.set(seed.id, nextEntry);
+        existingBackgroundUrls.add(seed.backgroundUrl);
+        changed = true;
+      });
+
+      BOOTSTRAP_VENDOR_LIST_SEEDS.forEach(function (seed) {
+        const seedItems = buildVendorItemsFromSeed(seed);
+        if (!seedItems.length) return;
+        const signature = signatureForVendorList(seedItems);
+        const existingById = existingVendorListById.get(seed.id);
+        if (existingById) {
+          const existingSignature = signatureForVendorList(existingById.items);
+          if (existingById.name !== seed.name || existingSignature !== signature) {
+            existingById.name = seed.name;
+            existingById.items = seedItems;
+            existingById.lastUsedAt = now;
+            changed = true;
+          }
+          existingVendorListSignatures.add(signature);
+          return;
+        }
+
+        if (existingVendorListSignatures.has(signature)) return;
+        const nextEntry = {
+          id: seed.id,
+          name: seed.name,
+          items: seedItems,
+          createdAt: now,
+          lastUsedAt: now
+        };
+        state.vendorListLibrary.push(nextEntry);
+        existingVendorListById.set(seed.id, nextEntry);
+        existingVendorListSignatures.add(signature);
+        changed = true;
+      });
+
+      setSeedVersion(SEED_VERSION);
+      if (changed) save();
+      return changed;
+    }
 
     function notifyUser(level, message) {
       const runtimeNotifier = window.appNotify;
@@ -111,16 +401,19 @@
         return state;
       }
       if (!raw) {
+        applyBootstrapSeeds();
         save();
         return state;
       }
       try {
         state = normalizeLibraryState(JSON.parse(raw));
+        applyBootstrapSeeds();
         save();
       } catch (err) {
         console.error('Failed to parse library storage, reinitializing.', err);
         notifyUser('error', 'Library storage was invalid and has been reset.');
         state = normalizeLibraryState(null);
+        applyBootstrapSeeds();
         save();
       }
       return state;
@@ -393,9 +686,13 @@
       importVendorListLibraryJson: importVendorListLibraryJson,
       addVendorListFromCsv: addVendorListFromCsv,
       load: load,
-      save: save
+      save: save,
+      getBootstrapDiagnostics: getBootstrapDiagnostics,
+      reportBootstrapDiagnostics: reportBootstrapDiagnostics
     };
   }
 
   window.createLibraryStateTools = createLibraryStateTools;
+  window.getLibraryBootstrapDiagnostics = getBootstrapDiagnostics;
+  window.reportLibraryBootstrapDiagnostics = reportBootstrapDiagnostics;
 })();

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Farmers Market Vendor Map">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="100%" stop-color="#14532d" />
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)" />
+  <path d="M132 194h248v56H132z" fill="#f8fafc" opacity="0.95" />
+  <path d="M132 266h248v36H132z" fill="#fbbf24" opacity="0.95" />
+  <path d="M180 138c0 42 34 76 76 76s76-34 76-76-34-76-76-76-76 34-76 76z" fill="#f8fafc" opacity="0.95" />
+  <path d="M256 154c-22 0-40 18-40 40 0 32 40 86 40 86s40-54 40-86c0-22-18-40-40-40zm0 54c-8 0-14-6-14-14s6-14 14-14 14 6 14 14-6 14-14 14z" fill="#dc2626" />
+  <path d="M150 356h212v28H150z" fill="#e2e8f0" opacity="0.9" />
+  <path d="M176 404h160" stroke="#e2e8f0" stroke-width="16" stroke-linecap="round" opacity="0.8" />
+</svg>

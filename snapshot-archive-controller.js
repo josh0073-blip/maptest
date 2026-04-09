@@ -62,11 +62,40 @@
       };
     }
 
+    function extractSnapshotState(snapshot) {
+      if (!snapshot || typeof snapshot !== 'object') {
+        return null;
+      }
+
+      if (snapshot.mapState && typeof snapshot.mapState === 'object') {
+        return {
+          mapState: snapshot.mapState,
+          libraries: snapshot.libraries && typeof snapshot.libraries === 'object' ? snapshot.libraries : null
+        };
+      }
+
+      if (snapshot.snapshot && typeof snapshot.snapshot === 'object') {
+        return extractSnapshotState(snapshot.snapshot);
+      }
+
+      if (snapshot.state && typeof snapshot.state === 'object') {
+        return {
+          mapState: snapshot.state,
+          libraries: snapshot.libraries && typeof snapshot.libraries === 'object' ? snapshot.libraries : null
+        };
+      }
+
+      return {
+        mapState: snapshot,
+        libraries: snapshot.libraries && typeof snapshot.libraries === 'object' ? snapshot.libraries : null
+      };
+    }
+
     function applySnapshotObject(snapshot, options) {
       const settings = options || {};
-      const mapStatePayload = snapshot && typeof snapshot === 'object' && snapshot.mapState && typeof snapshot.mapState === 'object'
-        ? snapshot.mapState
-        : snapshot;
+      const extracted = extractSnapshotState(snapshot);
+      const mapStatePayload = extracted && extracted.mapState;
+      const snapshotLibraries = extracted && extracted.libraries;
 
       if (!mapStatePayload || typeof mapStatePayload !== 'object') {
         notify.error('Snapshot does not include valid map state.');
@@ -109,9 +138,9 @@
             pushHistory: true
           });
 
-          if (snapshot && typeof snapshot === 'object' && snapshot.libraries && typeof snapshot.libraries === 'object') {
+          if (snapshotLibraries && typeof snapshotLibraries === 'object') {
             try {
-              localStorage.setItem(libraryStorageKey, JSON.stringify(snapshot.libraries, null, 2));
+              localStorage.setItem(libraryStorageKey, JSON.stringify(snapshotLibraries, null, 2));
             } catch (err) {
               console.error('Failed restoring library state from snapshot.', err);
             }
@@ -149,9 +178,9 @@
         pushHistory: true
       });
 
-      if (snapshot && typeof snapshot === 'object' && snapshot.libraries && typeof snapshot.libraries === 'object') {
+      if (snapshotLibraries && typeof snapshotLibraries === 'object') {
         try {
-          localStorage.setItem(libraryStorageKey, JSON.stringify(snapshot.libraries, null, 2));
+          localStorage.setItem(libraryStorageKey, JSON.stringify(snapshotLibraries, null, 2));
         } catch (err) {
           console.error('Failed restoring library state from snapshot.', err);
         }

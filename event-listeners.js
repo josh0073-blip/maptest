@@ -13,6 +13,7 @@
     const updatePinControlVisibility = settings.updatePinControlVisibility;
     const updatePinCategoryVisibility = settings.updatePinCategoryVisibility;
     const updateVendorList = settings.updateVendorList;
+    const syncMapCanvasLayout = settings.syncMapCanvasLayout;
     const persistState = settings.persistState;
     const saveState = settings.saveState;
     const loadState = settings.loadState;
@@ -78,6 +79,7 @@
     const bgFileInput = elements.bgFileInput;
     const exportJpgBtn = elements.exportJpgBtn;
     const exportPdfBtn = elements.exportPdfBtn;
+    const printMapBtn = elements.printMapBtn;
     const exportMapAsImage = elements.exportMapAsImage;
     const exportMapAsPdf = elements.exportMapAsPdf;
 
@@ -137,7 +139,43 @@
 
     if (addVendorBtn) {
       addVendorBtn.addEventListener('click', () => {
-        addVendor({ name: `Vendor ${appState.nextId}`, x: 50, y: 50 });
+        // Compute initial vendor coordinates near the visible top-left of the map viewport
+        // so newly-added pins appear in the main visual area even when the map is panned/zoomed.
+        let initX = 60;
+        let initY = 60;
+        try {
+          const mapAreaEl = document.getElementById('mapArea');
+          const mapContentEl = document.getElementById('mapContent');
+          const zoom = (panZoomTools && typeof panZoomTools.getZoomLevel === 'function') ? panZoomTools.getZoomLevel() : 1;
+          const bgScale = Number(appState.backgroundScale) || 1;
+          if (mapAreaEl && mapContentEl) {
+            const areaRect = mapAreaEl.getBoundingClientRect();
+            const mapRect = mapContentEl.getBoundingClientRect();
+              // Prefer a more top-left spawn so the pin is easier to find in the viewport
+              const offsetX = Math.round(areaRect.width * 0.15); // ~15% from left
+              const offsetY = Math.round(areaRect.height * 0.12); // ~12% from top
+              // Convert viewport offset to display coordinates (divide by zoom), then to map units (divide by bgScale)
+              let displayX = (areaRect.left - mapRect.left + offsetX) / Math.max(0.0001, zoom);
+              let displayY = (areaRect.top - mapRect.top + offsetY) / Math.max(0.0001, zoom);
+              // Clamp to map content bounds so pins aren't placed outside visible content
+              try {
+                const maxDisplayX = Math.max(0, mapContentEl.offsetWidth - 8);
+                const maxDisplayY = Math.max(0, mapContentEl.offsetHeight - 8);
+                displayX = Math.min(maxDisplayX, Math.max(0, displayX));
+                displayY = Math.min(maxDisplayY, Math.max(0, displayY));
+              } catch (e) {
+                // ignore clamp errors and use unclamped values
+              }
+              initX = displayX / Math.max(0.0001, bgScale);
+              initY = displayY / Math.max(0.0001, bgScale);
+          }
+        } catch (err) {
+          // fallback to defaults
+          initX = 60;
+          initY = 60;
+        }
+
+        addVendor({ name: `Vendor ${appState.nextId}`, x: initX, y: initY });
         persistState();
       });
     }
@@ -350,6 +388,23 @@
 
     if (exportJpgBtn) exportJpgBtn.addEventListener('click', exportMapAsImage);
     if (exportPdfBtn) exportPdfBtn.addEventListener('click', exportMapAsPdf);
+    if (printMapBtn) {
+      printMapBtn.addEventListener('click', () => {
+        const userAgent = navigator.userAgent || '';
+        const platform = navigator.platform || '';
+        const isIPadLike = /iPad|iPhone|iPod/.test(userAgent) || (platform === 'MacIntel' && (navigator.maxTouchPoints || 0) > 1);
+        if (isIPadLike) {
+          notify.info('On iPad, use Export PDF for the most reliable print/share flow.');
+          exportMapAsPdf();
+          return;
+        }
+        if (typeof window.print !== 'function') {
+          notify.warn('Native printing is not available in this browser. Use Export PDF instead.');
+          return;
+        }
+        window.print();
+      });
+    }
 
     if (zoomInBtn) zoomInBtn.addEventListener('click', () => settings.setZoom(panZoomTools.getZoomLevel() + 0.1));
     if (zoomOutBtn) zoomOutBtn.addEventListener('click', () => settings.setZoom(panZoomTools.getZoomLevel() - 0.1));
@@ -954,6 +1009,10 @@
           sidebar.classList.remove('open');
           syncSidebarToggleState(false);
           sidebarToggle.focus();
+        }
+
+        if (typeof syncMapCanvasLayout === 'function') {
+          syncMapCanvasLayout();
         }
       });
     }

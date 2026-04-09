@@ -133,7 +133,7 @@
         }
       });
 
-      return trimWhitespaceFromCanvas(renderedCanvas, 18);
+      return renderedCanvas;
     }
 
     async function exportMapAsImage() {

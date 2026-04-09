@@ -85,6 +85,12 @@ body {
   background: rgba(15, 23, 42, 0.6);
   z-index: 4000;
 }
+.first-run-overlay {
+  pointer-events: none;
+}
+.first-run-content {
+  pointer-events: auto;
+}
 .first-run-overlay[hidden],
 .keyboard-help[hidden] {
   display: none !important;
@@ -697,6 +703,77 @@ body {
 .vendor-pin .resize:hover,
 .vendor-pin .delete:hover {
   color: #064e3b;
+}
+
+@media print {
+  @page {
+    margin: 0.35in;
+  }
+
+  html, body {
+    height: auto;
+    overflow: visible;
+    background: #fff;
+  }
+
+  body {
+    color: #000;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .app-shell {
+    display: block;
+    height: auto;
+  }
+
+  .sidebar,
+  .sidebar-toggle,
+  .toast-container,
+  .first-run-overlay,
+  .keyboard-help {
+    display: none !important;
+  }
+
+  .map-area {
+    position: static;
+    overflow: visible;
+    cursor: default;
+    touch-action: auto;
+    width: 100vw;
+    height: auto;
+    min-height: 100vh;
+  }
+
+  .map-content {
+    position: relative;
+    inset: auto;
+    width: 100%;
+    height: 100vh;
+    transform: none !important;
+    overflow: visible;
+  }
+
+  .map-content::before {
+    opacity: 1;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .map-overlay,
+  .lasso-box {
+    display: none !important;
+  }
+
+  .vendor-pin {
+    box-shadow: none !important;
+  }
+
+  .map-title {
+    background: rgba(0, 0, 0, 0.6);
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
 }
 
 .vendor-pin.status-standby .status-indicator {
