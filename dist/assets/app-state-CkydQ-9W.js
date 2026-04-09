@@ -1,2 +1,0 @@
-(function(){function e(e){let t=Object.assign({},e);function n(){return t}function r(e){return Object.assign(t,e||{}),t}return{getState:n,patchState:r}}window.createAppStateStore=e})();
-//# sourceMappingURL=app-state-CkydQ-9W.js.map

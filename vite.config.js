@@ -7,11 +7,6 @@ import { VitePWA } from 'vite-plugin-pwa';
 const depsRoot = process.env.VITE_DEPS_ROOT;
 const workspaceRoot = process.cwd();
 const require = createRequire(import.meta.url);
-const { VitePWA } = require(
-  depsRoot
-    ? path.resolve(depsRoot, 'node_modules/vite-plugin-pwa')
-    : 'vite-plugin-pwa'
-);
 
 const resolveAlias = depsRoot
   ? {
