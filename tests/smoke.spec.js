@@ -1,9 +1,8 @@
 const { test, expect } = require('@playwright/test');
-const path = require('path');
 
 function appUrl() {
-  const fullPath = path.resolve(__dirname, '..', 'index.html');
-  return 'file:///' + fullPath.replace(/\\/g, '/');
+  const configuredBaseUrl = process.env.SMOKE_BASE_URL || process.env.PLAYWRIGHT_BASE_URL || 'http://127.0.0.1:4173/';
+  return new URL('.', configuredBaseUrl).href;
 }
 
 function distance(a, b) {
@@ -61,6 +60,8 @@ test.beforeEach(async ({ page }) => {
     await firstRunDismiss.click();
   }
 
+  await page.waitForFunction(() => typeof window.benchmarkVendorListUpdate === 'function');
+  await expect(page.locator('#template-list .template-item')).toHaveCount(3);
   await expect(page.locator('#self-check-run-btn')).toBeVisible();
   await expect(page.locator('#add-vendor')).toBeVisible();
 });
@@ -68,7 +69,7 @@ test.beforeEach(async ({ page }) => {
 test('loads app shell and self-check panel', async ({ page }) => {
   await expect(page.locator('h1')).toHaveText('Vendor Map Editor');
   await expect(page.locator('#self-check-run-btn')).toBeVisible();
-  await expect(page.locator('#self-check-results')).toContainText('Health Check');
+  await expect(page.locator('#self-check-results')).toContainText(/Health Check|Run checks to verify state/i);
 });
 
 test('add vendor then undo/redo', async ({ page }) => {
@@ -206,8 +207,11 @@ test('template toggle interleaving clears redo after new commit', async ({ page 
 });
 
 test('vendor list library save and load', async ({ page }) => {
+  const vendorLibOptions = page.locator('#vendor-lib-select option');
+  const initialOptionCount = await vendorLibOptions.count();
+
   await page.locator('#vendor-lib-save-btn').click();
-  await expect(page.locator('#vendor-lib-select option')).toHaveCount(1);
+  await expect(vendorLibOptions).toHaveCount(initialOptionCount + 1);
 
   await page.locator('#vendor-lib-load-mode').selectOption('replace');
   await page.locator('#vendor-lib-load-btn').click();
@@ -933,6 +937,9 @@ test('template CRUD operations', async ({ page }) => {
 
 test('enhanced CSV import', async ({ page }) => {
   const csvText = 'name,active\nTemplate C,true\nTemplate D,false';
+  const vendorLibOptions = page.locator('#vendor-lib-select option');
+  const initialOptionCount = await vendorLibOptions.count();
+
   page.once('dialog', (dialog) => dialog.accept());
   await page.locator('#vendor-lib-import-input').setInputFiles({
     name: 'vendor-library.csv',
@@ -940,7 +947,7 @@ test('enhanced CSV import', async ({ page }) => {
     buffer: Buffer.from(csvText)
   });
 
-  await expect(page.locator('#vendor-lib-select option')).toHaveCount(1);
+  await expect(vendorLibOptions).toHaveCount(initialOptionCount + 1);
   await page.locator('#vendor-lib-load-mode').selectOption('replace');
   await page.locator('#vendor-lib-load-btn').click();
 

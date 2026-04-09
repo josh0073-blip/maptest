@@ -1,15 +1,15 @@
 const { test, expect } = require('@playwright/test');
-const path = require('path');
 
 function appUrl() {
-  const fullPath = path.resolve(__dirname, '..', 'index.html');
-  return 'file:///' + fullPath.replace(/\\/g, '/');
+  const configuredBaseUrl = process.env.SMOKE_BASE_URL || process.env.PLAYWRIGHT_BASE_URL || 'http://127.0.0.1:4173/';
+  return new URL('.', configuredBaseUrl).href;
 }
 
 test.beforeEach(async ({ page }) => {
   await page.goto(appUrl(), { waitUntil: 'domcontentloaded' });
   await page.evaluate(() => { localStorage.clear(); sessionStorage.clear(); });
   await page.reload({ waitUntil: 'domcontentloaded' });
+  await page.waitForFunction(() => typeof window.normalizeMapState === 'function');
 });
 
 test('normalizeMapState rejects unsafe background URL and normalizes vendors', async ({ page }) => {
