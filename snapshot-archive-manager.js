@@ -87,51 +87,15 @@ export const PRELOADED_SNAPSHOTS = [
 export function createSnapshotArchiveManager(options) {
   const settings = options || {};
   const notify = settings.notify || { error: function () {} };
-  const fileInput = document.createElement('input');
-  fileInput.type = 'file';
-  fileInput.accept = '.json';
+  const library = [...PRELOADED_SNAPSHOTS];
 
-  function openFileExplorer() {
-    return new Promise((resolve, reject) => {
-      fileInput.onchange = (event) => {
-        const file = event.target.files[0];
-        if (!file) {
-          reject('No file selected');
-          return;
-        }
-
-        const reader = new FileReader();
-        reader.onload = () => {
-          try {
-            const snapshot = JSON.parse(reader.result);
-            resolve(snapshot);
-          } catch (err) {
-            reject('Invalid JSON file');
-          }
-        };
-        reader.onerror = () => reject('Failed to read file');
-        reader.readAsText(file);
-      };
-
-      fileInput.click();
-    });
-  }
-
-  async function restoreSnapshot() {
-    try {
-      const snapshot = await openFileExplorer();
-      // Trigger external restore workflow
-      if (typeof settings.restoreSnapshot === 'function') {
-        settings.restoreSnapshot(snapshot);
-      } else {
-        console.error('Restore function not provided');
-      }
-    } catch (error) {
-      notify.error(error);
-    }
+  function load() {
+    console.log('Loading preloaded snapshots:', library);
+    return library;
   }
 
   return {
+    load,
     restoreSnapshot,
   };
 }
