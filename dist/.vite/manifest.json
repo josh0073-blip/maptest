@@ -1,8 +1,18 @@
 {
+  "assets/icons.svg": {
+    "file": "assets/icons-DuEQaUzv.svg",
+    "src": "assets/icons.svg"
+  },
   "index.html": {
-    "file": "assets/index-CkdOZISs.js",
+    "file": "assets/index-CM1raD04.js",
     "name": "index",
     "src": "index.html",
-    "isEntry": true
+    "isEntry": true,
+    "css": [
+      "assets/index-NRCy97ek.css"
+    ],
+    "assets": [
+      "assets/icons-DuEQaUzv.svg"
+    ]
   }
 }

@@ -101,6 +101,15 @@ function bootstrapBackgroundFileListPlugin() {
       });
 
       const staticPwaAssets = ['pwa-icon.svg', 'pwa-192.png', 'pwa-512.png'];
+      const bootstrapManifestPath = path.resolve(workspaceRoot, 'bootstrap-manifest.js');
+      if (fs.existsSync(bootstrapManifestPath)) {
+        this.emitFile({
+          type: 'asset',
+          fileName: 'bootstrap-manifest.js',
+          source: fs.readFileSync(bootstrapManifestPath, 'utf8')
+        });
+      }
+
       staticPwaAssets.forEach((fileName) => {
         const absolutePath = path.resolve(workspaceRoot, 'public', fileName);
         if (!fs.existsSync(absolutePath)) {

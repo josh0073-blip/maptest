@@ -35,16 +35,7 @@
   }
 
   function toBootstrapBackgroundUrl(filename) {
-    const encodedFile = encodeURIComponent(String(filename || '').trim());
-    const relativePath = 'bootstrap-backgrounds/' + encodedFile;
-    try {
-      if (typeof document !== 'undefined' && document.baseURI) {
-        return new URL(relativePath, document.baseURI).toString();
-      }
-    } catch (err) {
-      // Fallback to relative path when URL resolution is unavailable.
-    }
-    return relativePath;
+    return 'bootstrap-backgrounds/' + encodeURIComponent(String(filename || '').trim());
   }
 
   const BOOTSTRAP_BACKGROUND_SEEDS = [].concat(
