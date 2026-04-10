@@ -30,3 +30,26 @@ test('normalizeMapState rejects unsafe background URL and normalizes vendors', a
   expect(result.vendors[0].rotation).toBe(10); // 370 % 360 = 10
   expect(result.backgroundUrl).toBe('');
 });
+
+test('normalizeMapState rescales vendor positions when map canvas size changes', async ({ page }) => {
+  const result = await page.evaluate(() => {
+    const input = {
+      vendors: [{ id: 1, name: 'A', x: 100, y: 50 }],
+      mapCanvasWidth: 1000,
+      mapCanvasHeight: 500
+    };
+
+    const defaults = {
+      mapCanvasWidth: 1200,
+      mapCanvasHeight: 600,
+      vendorCategories: [],
+      vendorTemplates: []
+    };
+
+    return window.normalizeMapState(input, defaults);
+  });
+
+  expect(result.vendors && result.vendors.length).toBe(1);
+  expect(result.vendors[0].x).toBeCloseTo(120, 3);
+  expect(result.vendors[0].y).toBeCloseTo(60, 3);
+});

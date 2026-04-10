@@ -1283,6 +1283,7 @@ const uploadCSV = templateTools.uploadCSV;
 const clearAllTemplates = templateTools.clearAllTemplates;
 
 function buildSerializableState() {
+  const baseSize = getBaseMapCanvasSize();
   return {
     nextId: appState.nextId,
     vendors: appState.vendors,
@@ -1293,7 +1294,9 @@ function buildSerializableState() {
     backgroundOpacity: appState.backgroundOpacity,
     backgroundScaleLocked: appState.backgroundScaleLocked,
     mapTitleText: appState.mapTitleText,
-    pinCategoryDisplayVisible: appState.pinCategoryDisplayVisible
+    pinCategoryDisplayVisible: appState.pinCategoryDisplayVisible,
+    mapCanvasWidth: baseSize.width,
+    mapCanvasHeight: baseSize.height
   };
 }
 
@@ -1508,13 +1511,16 @@ function getRecoverySnapshot() {
 }
 
 function getNormalizationDefaults() {
+  const baseSize = getBaseMapCanvasSize();
   return {
     vendorCategories: appState.vendorCategories,
     vendorTemplates: appState.vendorTemplates,
     backgroundScale: appState.backgroundScale,
     backgroundOpacity: appState.backgroundOpacity,
     mapTitleText: appState.mapTitleText,
-    pinCategoryDisplayVisible: appState.pinCategoryDisplayVisible
+    pinCategoryDisplayVisible: appState.pinCategoryDisplayVisible,
+    mapCanvasWidth: baseSize.width,
+    mapCanvasHeight: baseSize.height
   };
 }
 

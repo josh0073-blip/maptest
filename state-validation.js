@@ -8,6 +8,11 @@
     return Math.min(max, Math.max(min, value));
   }
 
+  function normalizeCanvasSize(value) {
+    const n = Number(value);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  }
+
   function sanitizeEditableText(value, fallback, maxLength) {
     const fallbackText = String(fallback || '').trim() || 'Untitled';
     const raw = String(value || '');
@@ -109,6 +114,19 @@
     const safeParsed = parsed && typeof parsed === 'object' ? parsed : {};
     const safeDefaults = defaults && typeof defaults === 'object' ? defaults : {};
 
+    const targetCanvasWidth = normalizeCanvasSize(safeDefaults.mapCanvasWidth);
+    const targetCanvasHeight = normalizeCanvasSize(safeDefaults.mapCanvasHeight);
+    const sourceCanvasWidth = normalizeCanvasSize(safeParsed.mapCanvasWidth);
+    const sourceCanvasHeight = normalizeCanvasSize(safeParsed.mapCanvasHeight);
+
+    const hasScaleContext =
+      sourceCanvasWidth !== null &&
+      sourceCanvasHeight !== null &&
+      targetCanvasWidth !== null &&
+      targetCanvasHeight !== null;
+    const scaleX = hasScaleContext ? (targetCanvasWidth / sourceCanvasWidth) : 1;
+    const scaleY = hasScaleContext ? (targetCanvasHeight / sourceCanvasHeight) : 1;
+
     const fallbackCategories = Array.isArray(safeDefaults.vendorCategories) ? safeDefaults.vendorCategories : [];
     const categoryInput = Array.isArray(safeParsed.vendorCategories) ? safeParsed.vendorCategories : fallbackCategories;
     const vendorCategories = categoryInput.map(normalizeCategory);
@@ -120,7 +138,15 @@
 
     const vendorInput = Array.isArray(safeParsed.vendors) ? safeParsed.vendors : [];
     const vendors = vendorInput.map(function (vendor, index) {
-      return normalizeVendor(vendor, index, validCategoryIds);
+      const normalizedVendor = normalizeVendor(vendor, index, validCategoryIds);
+      if (!hasScaleContext) {
+        return normalizedVendor;
+      }
+
+      return Object.assign({}, normalizedVendor, {
+        x: normalizedVendor.x * scaleX,
+        y: normalizedVendor.y * scaleY
+      });
     });
 
     const maxVendorId = vendors.reduce(function (max, vendor) {
