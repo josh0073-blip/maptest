@@ -47,6 +47,26 @@ export const PRELOADED_SNAPSHOTS = [
           size: 1,
           height: 1,
           clustered: false
+        },
+        {
+          id: 152,
+          name: 'Baby Leaf Farm',
+          x: 390.5555555555555,
+          y: 343.33333333333326,
+          templateId: 3,
+          status: 'normal',
+          alignRefX: 'left',
+          alignRefY: 'top',
+          rotation: 45,
+          size: 1,
+          height: 1,
+          clustered: false
+        },
+        {
+          id: 153,
+          name: 'Bellaire Blooms',
+          x: 178.55072463768116,
+          y: 175.19740940735988
         }
       ],
       vendorCategories: [
