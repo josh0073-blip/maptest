@@ -38,7 +38,22 @@
     }
 
     function renderSnapshotArchiveOptions() {
-      snapshotArchiveManager.renderOptions();
+      if (!selectElement) return;
+
+      const selectedId = String(selectElement.value || '');
+      const allSnapshots = [...PRELOADED_SNAPSHOTS, ...getFilteredLibrary()];
+
+      selectElement.innerHTML = '';
+      allSnapshots.forEach((entry) => {
+        const option = document.createElement('option');
+        option.value = entry.id;
+        option.textContent = optionLabelForEntry(entry);
+        selectElement.appendChild(option);
+      });
+
+      if (selectedId) {
+        selectElement.value = selectedId;
+      }
     }
 
     function addSnapshotArchiveEntry(name, snapshot, config) {
