@@ -1,3 +1,5 @@
+import { PRELOADED_SNAPSHOTS } from './snapshot-archive-manager.js';
+
 (function () {
   function createSnapshotArchiveStorage(options) {
     const settings = options || {};
