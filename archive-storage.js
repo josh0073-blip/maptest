@@ -46,8 +46,7 @@ import { PRELOADED_SNAPSHOTS } from './snapshot-archive-manager.js';
         const db = await openDatabase();
         if (!db) {
           backend = 'localStorage';
-          const legacy = readLegacyLocalStorage();
-          return legacy.length ? legacy : PRELOADED_SNAPSHOTS;
+          return readLegacyLocalStorage();
         }
 
         const stored = await new Promise((resolve, reject) => {
@@ -60,10 +59,10 @@ import { PRELOADED_SNAPSHOTS } from './snapshot-archive-manager.js';
 
         db.close();
         backend = 'indexeddb';
-        return stored.length ? stored : PRELOADED_SNAPSHOTS;
+        return stored;
       } catch (err) {
         console.error('Failed reading archive library, falling back to preloaded snapshots.', err);
-        return PRELOADED_SNAPSHOTS;
+        return [];
       }
     }
 

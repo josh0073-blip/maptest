@@ -1,5 +1,58 @@
 {
-  "nextId": 184,
-  "vendors": [],
-  "vendorTemplates": []
+  "schemaVersion": 1,
+  "createdAt": "2026-04-06T00:00:00Z",
+  "reason": "archive-seed",
+  "mapState": {
+    "nextId": 184,
+    "vendors": [
+      {
+        "id": 149,
+        "name": "Sylvatica Forest Farm",
+        "x": 498.5801003133111,
+        "y": 164.2184058425586,
+        "templateId": null,
+        "status": "normal",
+        "alignRefX": "left",
+        "alignRefY": "top",
+        "rotation": 45,
+        "size": 1,
+        "height": 1,
+        "clustered": true
+      },
+      {
+        "id": 151,
+        "name": "ArMi Farms",
+        "x": 533.8888888888888,
+        "y": 342.77777777777766,
+        "templateId": 2,
+        "status": "normal",
+        "alignRefX": "left",
+        "alignRefY": "top",
+        "rotation": 45,
+        "size": 1,
+        "height": 1,
+        "clustered": false
+      }
+    ],
+    "vendorCategories": [
+      { "id": 1, "name": "Vegetable Farmer", "color": "#16a34a" },
+      { "id": 2, "name": "Art Vendor", "color": "#0284c7" },
+      { "id": 3, "name": "Prepared Food", "color": "#ea580c" }
+    ],
+    "vendorTemplates": [
+      { "id": 1, "name": "Tomato Stand", "active": false },
+      { "id": 2, "name": "Bakery", "active": false },
+      { "id": 3, "name": "Cheese", "active": false }
+    ],
+    "backgroundUrl": "",
+    "backgroundScale": 1,
+    "backgroundOpacity": 1,
+    "backgroundScaleLocked": false,
+    "mapTitleText": "Farmers Market Vendor Map",
+    "pinCategoryDisplayVisible": true
+  },
+  "libraries": {
+    "backgroundLibrary": [],
+    "vendorListLibrary": []
+  }
 }

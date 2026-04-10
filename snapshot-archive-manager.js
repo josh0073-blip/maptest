@@ -48,7 +48,23 @@ export const PRELOADED_SNAPSHOTS = [
           height: 1,
           clustered: false
         }
-      ]
+      ],
+      vendorCategories: [
+        { id: 1, name: 'Vegetable Farmer', color: '#16a34a' },
+        { id: 2, name: 'Art Vendor', color: '#0284c7' },
+        { id: 3, name: 'Prepared Food', color: '#ea580c' }
+      ],
+      vendorTemplates: [
+        { id: 1, name: 'Tomato Stand', active: false },
+        { id: 2, name: 'Bakery', active: false },
+        { id: 3, name: 'Cheese', active: false }
+      ],
+      backgroundUrl: '',
+      backgroundScale: 1,
+      backgroundOpacity: 1,
+      backgroundScaleLocked: false,
+      mapTitleText: 'Farmers Market Vendor Map',
+      pinCategoryDisplayVisible: true
     },
     tags: ['farmers', 'market'],
   }
@@ -210,13 +226,12 @@ export function createSnapshotArchiveManager(options) {
   async function load() {
     const source = typeof readLibrary === 'function'
       ? await readLibrary()
-      : PRELOADED_SNAPSHOTS;
+      : [];
 
-    const inputEntries = Array.isArray(source) && source.length ? source : PRELOADED_SNAPSHOTS;
+    const inputEntries = Array.isArray(source) ? source : [];
     const normalized = inputEntries
       .map(normalizeEntry)
       .filter(Boolean)
-      .sort(sortNewestFirst)
       .slice(0, limit);
 
     library = normalized;
@@ -229,17 +244,23 @@ export function createSnapshotArchiveManager(options) {
     const selectedId = String(selectElement.value || '');
     const filtered = getFilteredLibrary();
 
-    console.log('Filtered library entries for rendering:', JSON.stringify(filtered, null, 2));
-
     selectElement.innerHTML = '';
+
+    if (!filtered.length) {
+      const option = document.createElement('option');
+      option.value = '';
+      option.disabled = true;
+      option.textContent = 'No snapshots match current filters';
+      selectElement.appendChild(option);
+      return;
+    }
+
     filtered.forEach(function (entry) {
       const option = document.createElement('option');
       option.value = String(entry.id);
       option.textContent = optionLabelForEntry(entry);
       selectElement.appendChild(option);
     });
-
-    console.log('Updated selectElement options:', selectElement.innerHTML);
 
     if (selectedId && filtered.some(function (entry) { return String(entry.id) === selectedId; })) {
       selectElement.value = selectedId;
@@ -275,27 +296,14 @@ export function createSnapshotArchiveManager(options) {
       return null;
     }
 
-    console.log('Library before adding entry:', library);
     library.unshift(normalized);
     if (library.length > limit) {
-      console.log('Library exceeded limit. Removing oldest entries.');
-      console.log('Library before sorting:', JSON.stringify(library.map(entry => ({ id: entry.id, timestamp: entry.timestamp })), null, 2));
-
-      // Sort library to ensure oldest entries are at the end
-      library.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-      console.log('Library after sorting:', JSON.stringify(library.map(entry => ({ id: entry.id, timestamp: entry.timestamp })), null, 2));
-
       library = library.slice(0, limit);
-      console.log('Library after slicing to limit:', JSON.stringify(library.map(entry => ({ id: entry.id, timestamp: entry.timestamp })), null, 2));
-
-      // Verify the final state of the library
-      console.log('Final library state:', JSON.stringify(library.map(entry => ({ id: entry.id, timestamp: entry.timestamp })), null, 2));
     }
 
     const didPersist = await persistLibrary();
     if (!didPersist) return null;
 
-    console.log('Calling renderOptions after persisting library.');
     renderOptions();
     return normalized;
   }
