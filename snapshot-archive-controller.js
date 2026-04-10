@@ -37,35 +37,12 @@
       return snapshotArchiveManager.getSelectedEntry();
     }
 
-    let selectElement = document.getElementById('snapshot-archive-dropdown');
-
     function renderSnapshotArchiveOptions() {
-      if (!selectElement) {
-        console.error('Failed to initialize snapshot archive library. selectElement is not defined.');
-        return;
+      if (typeof snapshotArchiveManager.renderOptions === 'function') {
+        snapshotArchiveManager.renderOptions();
+      } else {
+        console.error('Snapshot archive manager cannot render options.');
       }
-
-      console.log('Rendering snapshot archive options...');
-      console.log('Preloaded Snapshots:', PRELOADED_SNAPSHOTS);
-
-      const selectedId = String(selectElement.value || '');
-      const allSnapshots = [...PRELOADED_SNAPSHOTS, ...getFilteredLibrary()];
-
-      console.log('All Snapshots to Render:', allSnapshots);
-
-      selectElement.innerHTML = '';
-      allSnapshots.forEach((entry) => {
-        const option = document.createElement('option');
-        option.value = entry.id;
-        option.textContent = optionLabelForEntry(entry);
-        selectElement.appendChild(option);
-      });
-
-      if (selectedId) {
-        selectElement.value = selectedId;
-      }
-
-      console.log('Dropdown options rendered:', selectElement.innerHTML);
     }
 
     function addSnapshotArchiveEntry(name, snapshot, config) {
