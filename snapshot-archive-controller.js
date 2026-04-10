@@ -37,8 +37,13 @@
       return snapshotArchiveManager.getSelectedEntry();
     }
 
+    let selectElement = document.getElementById('snapshot-archive-dropdown');
+
     function renderSnapshotArchiveOptions() {
-      if (!selectElement) return;
+      if (!selectElement) {
+        console.error('Failed to initialize snapshot archive library. selectElement is not defined.');
+        return;
+      }
 
       console.log('Rendering snapshot archive options...');
       console.log('Preloaded Snapshots:', PRELOADED_SNAPSHOTS);
