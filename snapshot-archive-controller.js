@@ -40,8 +40,13 @@
     function renderSnapshotArchiveOptions() {
       if (!selectElement) return;
 
+      console.log('Rendering snapshot archive options...');
+      console.log('Preloaded Snapshots:', PRELOADED_SNAPSHOTS);
+
       const selectedId = String(selectElement.value || '');
       const allSnapshots = [...PRELOADED_SNAPSHOTS, ...getFilteredLibrary()];
+
+      console.log('All Snapshots to Render:', allSnapshots);
 
       selectElement.innerHTML = '';
       allSnapshots.forEach((entry) => {
@@ -54,6 +59,8 @@
       if (selectedId) {
         selectElement.value = selectedId;
       }
+
+      console.log('Dropdown options rendered:', selectElement.innerHTML);
     }
 
     function addSnapshotArchiveEntry(name, snapshot, config) {
