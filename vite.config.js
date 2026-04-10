@@ -80,10 +80,16 @@ function bootstrapBackgroundFileListPlugin() {
         if (!fs.existsSync(absolutePath)) {
           return;
         }
+        const source = fs.readFileSync(absolutePath);
         this.emitFile({
           type: 'asset',
           fileName: `bootstrap-backgrounds/${fileName}`,
-          source: fs.readFileSync(absolutePath)
+          source
+        });
+        this.emitFile({
+          type: 'asset',
+          fileName: `public/bootstrap-backgrounds/${fileName}`,
+          source
         });
       });
 

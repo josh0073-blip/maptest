@@ -1,7 +1,7 @@
 (function () {
   const STORAGE_KEY = 'farmersMarketLibraries';
   const SEED_VERSION_STORAGE_KEY = 'farmersMarketLibrarySeedVersion';
-  const SEED_VERSION = 7;
+  const SEED_VERSION = 8;
 
   // Replaced by Vite plugin at build/dev time.
   const BOOTSTRAP_BACKGROUND_FILES = typeof __BOOTSTRAP_BACKGROUND_FILES__ !== 'undefined' ? __BOOTSTRAP_BACKGROUND_FILES__ : [];
@@ -35,7 +35,7 @@
   }
 
   function toBootstrapBackgroundUrl(filename) {
-    return 'bootstrap-backgrounds/' + encodeURIComponent(String(filename || '').trim());
+    return 'public/bootstrap-backgrounds/' + encodeURIComponent(String(filename || '').trim());
   }
 
   const BOOTSTRAP_BACKGROUND_SEEDS = [].concat(
