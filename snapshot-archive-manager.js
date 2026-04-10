@@ -89,9 +89,9 @@ export function createSnapshotArchiveManager(options) {
   const notify = settings.notify || { error: function () {} };
   const library = [...PRELOADED_SNAPSHOTS];
 
-  function load() {
+  async function load() {
     console.log('Loading preloaded snapshots:', library);
-    return library;
+    return Promise.resolve(library);
   }
 
   function restoreSnapshot(snapshot) {
