@@ -1,10 +1,6 @@
 {
-  "assets/icons.svg": {
-    "file": "assets/icons-DuEQaUzv.svg",
-    "src": "assets/icons.svg"
-  },
   "index.html": {
-    "file": "assets/main-CEjjXcgy.js",
+    "file": "assets/main-DVKEdTKS.js",
     "name": "main",
     "src": "index.html",
     "isEntry": true,
@@ -13,8 +9,7 @@
     ],
     "assets": [
       "assets/manifest-vKirWI-e.webmanifest",
-      "assets/pwa-192-CAp8jBcA.png",
-      "assets/icons-DuEQaUzv.svg"
+      "assets/pwa-192-CAp8jBcA.png"
     ]
   },
   "public/manifest.webmanifest": {

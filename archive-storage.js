@@ -38,22 +38,48 @@ import { PRELOADED_SNAPSHOTS } from './snapshot-archive-manager.js';
       return true;
     }
 
+    function isSnapshotPayloadComplete(snapshot) {
+      if (!snapshot || typeof snapshot !== 'object') return false;
+      if (!Array.isArray(snapshot.vendors)) return false;
+      if (!Array.isArray(snapshot.vendorTemplates)) return false;
+      if (!Array.isArray(snapshot.vendorCategories)) return false;
+      const nextId = Number(snapshot.nextId);
+      if (!Number.isFinite(nextId) || nextId < 1) return false;
+      return true;
+    }
+
+    function isArchiveEntryComplete(entry) {
+      if (!entry || typeof entry !== 'object') return false;
+      return isSnapshotPayloadComplete(entry.snapshot);
+    }
+
     function mergePreloadedSnapshots(entries) {
       const merged = Array.isArray(entries) ? entries.map(cloneValue).filter(Boolean) : [];
-      const seen = new Set(merged.map((entry) => String(entry && entry.id || '')));
-      let added = false;
+      const existingById = new Map(merged.map((entry, index) => [String(entry && entry.id || ''), index]));
+      let modified = false;
 
       PRELOADED_SNAPSHOTS.forEach((entry) => {
         const id = String(entry && entry.id || '');
-        if (!id || seen.has(id)) return;
+        if (!id) return;
         const cloned = cloneValue(entry);
         if (!cloned) return;
-        merged.push(cloned);
-        seen.add(id);
-        added = true;
+
+        if (!existingById.has(id)) {
+          merged.push(cloned);
+          existingById.set(id, merged.length - 1);
+          modified = true;
+          return;
+        }
+
+        const existingIndex = existingById.get(id);
+        const existingEntry = merged[existingIndex];
+        if (!isArchiveEntryComplete(existingEntry)) {
+          merged[existingIndex] = cloned;
+          modified = true;
+        }
       });
 
-      return { entries: merged, added: added };
+      return { entries: merged, modified: modified };
     }
 
     function openDatabase() {
@@ -97,7 +123,7 @@ import { PRELOADED_SNAPSHOTS } from './snapshot-archive-manager.js';
           const storedLegacy = readLegacyLocalStorage();
           const mergedLegacy = mergePreloadedSnapshots(storedLegacy);
 
-          if (bootstrapVersionSeen !== bootstrapVersion || mergedLegacy.added) {
+          if (bootstrapVersionSeen !== bootstrapVersion || mergedLegacy.modified) {
             localStorage.setItem(storageKey, JSON.stringify(mergedLegacy.entries));
             writeBootstrapVersion();
           }
@@ -117,7 +143,7 @@ import { PRELOADED_SNAPSHOTS } from './snapshot-archive-manager.js';
         backend = 'indexeddb';
 
         const merged = mergePreloadedSnapshots(stored);
-        if (bootstrapVersionSeen !== bootstrapVersion || merged.added) {
+        if (bootstrapVersionSeen !== bootstrapVersion || merged.modified) {
           await writeLibrary(merged.entries);
           writeBootstrapVersion();
           return merged.entries;
