@@ -391,7 +391,10 @@
         return;
       }
       const pin = e.target.closest('.vendor-pin');
-      if (pin) return;
+      if (pin) {
+        applyPinSelectionFromEvent(pin, e);
+        return;
+      }
 
       if (!e.shiftKey && !e.ctrlKey && !e.metaKey) {
         selectedPins.clear();

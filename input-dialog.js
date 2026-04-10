@@ -9,9 +9,10 @@
       root.setAttribute('role', 'dialog');
       root.setAttribute('aria-hidden', 'true');
       root.hidden = true;
+      root.style.zIndex = '30000';
       root.innerHTML = `
         <div class="input-backdrop" tabindex="-1"></div>
-        <div class="input-panel" role="document">
+        <div class="input-panel" role="document" style="z-index:30001;">
           <div class="input-body">
             <h3 class="input-title"></h3>
             <p class="input-message"></p>

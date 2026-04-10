@@ -26,6 +26,15 @@
       if (status === 'standby') pin.classList.add('status-standby');
       else if (status === 'alert') pin.classList.add('status-alert');
       else pin.classList.add('status-normal');
+
+      const edgeColor = status === 'standby'
+        ? '#a16207'
+        : status === 'alert'
+          ? '#991b1b'
+          : '#166534';
+      pin.style.borderTopColor = edgeColor;
+      pin.style.borderRightColor = edgeColor;
+      pin.style.borderBottomColor = edgeColor;
     }
 
     function setPinCategory(vendor, pin, categoryId) {
@@ -189,59 +198,12 @@
       applyPinPosition(vendor, pin);
       applyPinTransform(vendor, pin);
 
-      // Pending drag helpers (to avoid stealing double-clicks on labels)
-      let pendingDrag = null;
-
-      function clearPendingDrag() {
-        if (!pendingDrag) return;
-        document.removeEventListener('pointermove', pendingDrag.moveHandler);
-        document.removeEventListener('pointerup', pendingDrag.upHandler);
-        pendingDrag = null;
-      }
-
       pin.addEventListener('pointerdown', (event) => {
-        // Never start drag when clicking controls
         if (event.target.closest('button')) return;
-
         const clickedLabel = event.target.closest('.label');
+        if (clickedLabel && clickedLabel.isContentEditable) return;
+        if (clickedLabel && event.pointerType === 'mouse') return;
 
-        // If clicking the label, defer starting a drag until the pointer
-        // moves a bit. This preserves double-click-to-edit behavior.
-        if (clickedLabel) {
-          if (clickedLabel.isContentEditable) return;
-
-          const startX = event.clientX;
-          const startY = event.clientY;
-          const pointerId = typeof event.pointerId === 'number' ? event.pointerId : null;
-
-          function onMoveForPending(e) {
-            if (pointerId !== null && e.pointerId !== pointerId) return;
-            const dx = e.clientX - startX;
-            const dy = e.clientY - startY;
-            if (Math.sqrt(dx * dx + dy * dy) >= 6) {
-              clearPendingDrag();
-              // Start an actual drag using the current move event
-              event.stopPropagation();
-              startDrag(e, pin, vendor);
-            }
-          }
-
-          function onUpForPending(e) {
-            if (pointerId !== null && e.pointerId !== pointerId) return;
-            clearPendingDrag();
-          }
-
-          clearPendingDrag();
-          pendingDrag = {
-            moveHandler: onMoveForPending,
-            upHandler: onUpForPending
-          };
-          document.addEventListener('pointermove', onMoveForPending, { passive: false });
-          document.addEventListener('pointerup', onUpForPending);
-          return;
-        }
-
-        // Clicking elsewhere on the pin should start drag immediately
         event.stopPropagation();
         startDrag(event, pin, vendor);
       });

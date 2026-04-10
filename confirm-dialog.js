@@ -9,10 +9,11 @@
       container.setAttribute('role', 'dialog');
       container.setAttribute('aria-hidden', 'true');
       container.hidden = true;
+      container.style.zIndex = '30000';
 
       container.innerHTML = `
         <div class="confirm-backdrop" tabindex="-1"></div>
-        <div class="confirm-panel" role="document">
+        <div class="confirm-panel" role="document" style="z-index:30001;">
           <div class="confirm-body">
             <h3 class="confirm-title"></h3>
             <p class="confirm-message"></p>

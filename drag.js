@@ -55,7 +55,7 @@
     }
 
     function startDrag(event, pin, vendor) {
-      if (event.pointerType === 'mouse' && event.button !== 0) return;
+      if (event.pointerType === 'mouse' && event.button !== 0 && event.buttons !== 1) return;
       const mapRect = mapContent.getBoundingClientRect();
       const zoomLevel = getZoomLevel();
       activeDrag = {

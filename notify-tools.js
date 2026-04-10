@@ -175,6 +175,10 @@
     };
   }
 
+  const existingGlobalShowConfirmAsync = typeof window.showConfirmAsync === 'function'
+    ? window.showConfirmAsync
+    : null;
+
   window.createNotifyTools = createNotifyTools;
   // Expose a small global helper for modules that may run before notify is wired up.
   window.notifyFromError = function (err, fallback) {
@@ -197,19 +201,8 @@
 
   // Global async confirm helper for code that runs before the app notify is wired.
   window.showConfirmAsync = function (message, options) {
-    try {
-      if (window && window.createNotifyTools) {
-        try {
-          const runtime = window.createNotifyTools();
-          if (runtime && typeof runtime.showConfirmAsync === 'function') {
-            return runtime.showConfirmAsync(message, options);
-          }
-        } catch (e) {
-          // fallthrough to sync confirm
-        }
-      }
-    } catch (e) {
-      // ignore
+    if (typeof existingGlobalShowConfirmAsync === 'function') {
+      return existingGlobalShowConfirmAsync(message, options);
     }
     try {
       return Promise.resolve(Boolean(window.confirm(String(message || ''))));

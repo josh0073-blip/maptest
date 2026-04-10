@@ -113,7 +113,13 @@
 
         const text = document.createElement('span');
         text.textContent = template.name;
-        text.addEventListener('dblclick', async () => {
+        text.addEventListener('click', (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+        });
+        text.addEventListener('dblclick', async (event) => {
+          event.preventDefault();
+          event.stopPropagation();
           const newName = await window.showInputAsync('Edit template name:', { title: 'Edit template name', defaultValue: template.name });
           if (newName === null) return;
 
