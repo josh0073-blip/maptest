@@ -44,7 +44,8 @@
         const db = await openDatabase();
         if (!db) {
           backend = 'localStorage';
-          return readLegacyLocalStorage();
+          const legacy = readLegacyLocalStorage();
+          return legacy.length ? legacy : PRELOADED_SNAPSHOTS;
         }
 
         const stored = await new Promise((resolve, reject) => {
@@ -57,23 +58,10 @@
 
         db.close();
         backend = 'indexeddb';
-        const list = Array.isArray(stored) ? stored : [];
-        if (list.length) return list;
-
-        const legacy = readLegacyLocalStorage();
-        if (!legacy.length) return [];
-
-        await writeLibrary(legacy);
-        try {
-          localStorage.removeItem(storageKey);
-        } catch (err) {
-          console.warn('Could not clear legacy archive key from localStorage after migration.', err);
-        }
-        return legacy;
+        return stored.length ? stored : PRELOADED_SNAPSHOTS;
       } catch (err) {
-        console.error('Failed reading archive library from IndexedDB, falling back to localStorage.', err);
-        backend = 'localStorage';
-        return readLegacyLocalStorage();
+        console.error('Failed reading archive library, falling back to preloaded snapshots.', err);
+        return PRELOADED_SNAPSHOTS;
       }
     }
 
