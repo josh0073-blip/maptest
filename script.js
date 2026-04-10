@@ -1,3 +1,5 @@
+import { createSnapshotArchiveManager } from './snapshot-archive-manager.js';
+
 function registerRootServiceWorker() {
   if (typeof window === 'undefined' || !('serviceWorker' in navigator)) {
     return;
@@ -1431,8 +1433,10 @@ function pushHistorySnapshot() {
 }
 
 function restoreHistorySnapshot(snapshotText) {
+  console.log('Restoring snapshot:', snapshotText); // Debugging log
   const parsed = JSON.parse(snapshotText);
   const normalized = window.normalizeMapState(parsed, getNormalizationDefaults());
+  console.log('Normalized state:', normalized); // Debugging log
   if (!isNormalizedMapStateValid(normalized)) {
     throw new Error('History snapshot normalization returned invalid state.');
   }
@@ -1486,7 +1490,7 @@ const storageSyncTools = window.createStorageSyncTools({
 function buildFullSnapshotPayload(reason) {
   return snapshotTools.buildFullSnapshotPayload(reason);
 }
-const snapshotArchiveManager = window.createSnapshotArchiveManager({
+const snapshotArchiveManager = createSnapshotArchiveManager({
   limit: SNAPSHOT_ARCHIVE_LIMIT,
   readLibrary: () => snapshotArchiveStorage.readLibrary(),
   writeLibrary: (entries) => snapshotArchiveStorage.writeLibrary(entries),
@@ -1526,7 +1530,7 @@ function getNormalizationDefaults() {
 
 function applyNormalizedLoadedState(normalized) {
   actions.applyLoadedState(normalized);
-  if (mapTitle) mapTitle.textContent = appState.mapTitleText;
+  if (mapTitle) mapTitle.textContent = normalized.mapTitleText; // Ensure mapTitleText is applied correctly
   renderPinCategoryOptions();
   renderCategoryManagerOptions();
   setBackground(normalized.backgroundUrl);
@@ -1534,7 +1538,7 @@ function applyNormalizedLoadedState(normalized) {
   applyBackgroundOpacity();
   updateBgScaleLockButton();
   pinsContainer.innerHTML = '';
-  appState.vendors.forEach(createPin);
+  normalized.vendors.forEach(createPin); // Ensure vendors array is applied correctly
   renderTemplateList();
   updateVendorList();
 }
