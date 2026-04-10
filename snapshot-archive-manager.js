@@ -61,12 +61,6 @@ export const PRELOADED_SNAPSHOTS = [
           size: 1,
           height: 1,
           clustered: false
-        },
-        {
-          id: 153,
-          name: 'Bellaire Blooms',
-          x: 178.55072463768116,
-          y: 175.19740940735988
         }
       ],
       vendorCategories: [
