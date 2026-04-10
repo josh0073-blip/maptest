@@ -34,13 +34,26 @@
       .replace(/^-+|-+$/g, '');
   }
 
+  function toBootstrapBackgroundUrl(filename) {
+    const encodedFile = encodeURIComponent(String(filename || '').trim());
+    const relativePath = 'bootstrap-backgrounds/' + encodedFile;
+    try {
+      if (typeof document !== 'undefined' && document.baseURI) {
+        return new URL(relativePath, document.baseURI).toString();
+      }
+    } catch (err) {
+      // Fallback to relative path when URL resolution is unavailable.
+    }
+    return relativePath;
+  }
+
   const BOOTSTRAP_BACKGROUND_SEEDS = [].concat(
     (Array.isArray(BOOTSTRAP_BACKGROUND_FILES) ? BOOTSTRAP_BACKGROUND_FILES : []).map(function (filename) {
       return {
         id: makeSeedIdFromFile(filename),
         name: formatSeedNameFromFile(filename),
         sourceType: 'url',
-        backgroundUrl: '/bootstrap-backgrounds/' + filename
+        backgroundUrl: toBootstrapBackgroundUrl(filename)
       };
     })
   );
