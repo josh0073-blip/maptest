@@ -4,20 +4,25 @@
     "src": "assets/icons.svg"
   },
   "index.html": {
-    "file": "assets/index-9e8he2iI.js",
-    "name": "index",
+    "file": "assets/main-CEjjXcgy.js",
+    "name": "main",
     "src": "index.html",
     "isEntry": true,
     "css": [
-      "assets/index-NRCy97ek.css"
+      "assets/main-BaEopulo.css"
     ],
     "assets": [
       "assets/manifest-vKirWI-e.webmanifest",
+      "assets/pwa-192-CAp8jBcA.png",
       "assets/icons-DuEQaUzv.svg"
     ]
   },
   "public/manifest.webmanifest": {
     "file": "assets/manifest-vKirWI-e.webmanifest",
     "src": "public/manifest.webmanifest"
+  },
+  "public/pwa-192.png": {
+    "file": "assets/pwa-192-CAp8jBcA.png",
+    "src": "public/pwa-192.png"
   }
 }

@@ -147,6 +147,9 @@ export default defineConfig({
     manifest: true,
     sourcemap: true,
     rollupOptions: {
+      input: {
+        main: 'index.html',
+      },
       output: {
         manualChunks(id) {
           if (!id.includes('node_modules')) {

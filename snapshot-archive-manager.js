@@ -287,6 +287,9 @@ export function createSnapshotArchiveManager(options) {
 
       library = library.slice(0, limit);
       console.log('Library after slicing to limit:', JSON.stringify(library.map(entry => ({ id: entry.id, timestamp: entry.timestamp })), null, 2));
+
+      // Verify the final state of the library
+      console.log('Final library state:', JSON.stringify(library.map(entry => ({ id: entry.id, timestamp: entry.timestamp })), null, 2));
     }
 
     const didPersist = await persistLibrary();
