@@ -7,8 +7,54 @@ import { PRELOADED_SNAPSHOTS } from './snapshot-archive-manager.js';
     const dbName = settings.dbName;
     const dbVersion = settings.dbVersion;
     const storeName = settings.storeName;
+    const bootstrapStateKey = `${storageKey}:bootstrap-version`;
+    const bootstrapVersion = '1';
 
     let backend = 'indexeddb';
+
+    function cloneValue(value) {
+      try {
+        return JSON.parse(JSON.stringify(value));
+      } catch (err) {
+        return null;
+      }
+    }
+
+    function readBootstrapVersion() {
+      try {
+        return localStorage.getItem(bootstrapStateKey);
+      } catch (err) {
+        return null;
+      }
+    }
+
+    function writeBootstrapVersion() {
+      try {
+        localStorage.setItem(bootstrapStateKey, bootstrapVersion);
+      } catch (err) {
+        return false;
+      }
+
+      return true;
+    }
+
+    function mergePreloadedSnapshots(entries) {
+      const merged = Array.isArray(entries) ? entries.map(cloneValue).filter(Boolean) : [];
+      const seen = new Set(merged.map((entry) => String(entry && entry.id || '')));
+      let added = false;
+
+      PRELOADED_SNAPSHOTS.forEach((entry) => {
+        const id = String(entry && entry.id || '');
+        if (!id || seen.has(id)) return;
+        const cloned = cloneValue(entry);
+        if (!cloned) return;
+        merged.push(cloned);
+        seen.add(id);
+        added = true;
+      });
+
+      return { entries: merged, added: added };
+    }
 
     function openDatabase() {
       return new Promise((resolve, reject) => {
@@ -44,9 +90,19 @@ import { PRELOADED_SNAPSHOTS } from './snapshot-archive-manager.js';
     async function readLibrary() {
       try {
         const db = await openDatabase();
+        const bootstrapVersionSeen = readBootstrapVersion();
+
         if (!db) {
           backend = 'localStorage';
-          return readLegacyLocalStorage();
+          const storedLegacy = readLegacyLocalStorage();
+          const mergedLegacy = mergePreloadedSnapshots(storedLegacy);
+
+          if (bootstrapVersionSeen !== bootstrapVersion || mergedLegacy.added) {
+            localStorage.setItem(storageKey, JSON.stringify(mergedLegacy.entries));
+            writeBootstrapVersion();
+          }
+
+          return mergedLegacy.entries;
         }
 
         const stored = await new Promise((resolve, reject) => {
@@ -59,10 +115,20 @@ import { PRELOADED_SNAPSHOTS } from './snapshot-archive-manager.js';
 
         db.close();
         backend = 'indexeddb';
+
+        const merged = mergePreloadedSnapshots(stored);
+        if (bootstrapVersionSeen !== bootstrapVersion || merged.added) {
+          await writeLibrary(merged.entries);
+          writeBootstrapVersion();
+          return merged.entries;
+        }
+
         return stored;
       } catch (err) {
         console.error('Failed reading archive library, falling back to preloaded snapshots.', err);
-        return [];
+        const mergedFallback = mergePreloadedSnapshots([]);
+        writeBootstrapVersion();
+        return mergedFallback.entries;
       }
     }
 

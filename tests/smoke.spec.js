@@ -721,8 +721,15 @@ test('snapshot archive retention caps at the configured limit', async ({ page })
   await expect(page.locator('#snapshot-archive-select')).not.toContainText('Seed Snapshot 120');
 });
 
+test('snapshot archive preloads the bootstrap farmers market snapshot', async ({ page }) => {
+  await expect(page.locator('#snapshot-archive-select')).toContainText('Farmers Market Map - 2026-04-06');
+});
+
 test('snapshot archive filtering rename duplicate delete and restore', async ({ page }) => {
   const title = page.locator('#mapTitle');
+  const initialSnapshotCount = await page.locator('#snapshot-archive-select option').count();
+
+  expect(initialSnapshotCount).toBeGreaterThanOrEqual(3);
 
   await page.locator('#add-vendor').click();
   await title.evaluate((element) => {
@@ -734,7 +741,7 @@ test('snapshot archive filtering rename duplicate delete and restore', async ({ 
   await page.locator('#snapshot-archive-event-tag-input').fill('Opening Day');
   await page.locator('#snapshot-archive-save-btn').click();
 
-  await expect(page.locator('#snapshot-archive-select option')).toHaveCount(1);
+  await expect(page.locator('#snapshot-archive-select option')).toHaveCount(initialSnapshotCount + 1);
 
   const originalId = await page.locator('#snapshot-archive-select option').first().evaluate((option) => option.value);
 
@@ -745,7 +752,7 @@ test('snapshot archive filtering rename duplicate delete and restore', async ({ 
   await expect(page.locator('#snapshot-archive-select')).toContainText('Renamed Snapshot');
 
   await page.locator('#snapshot-archive-duplicate-btn').click();
-  await expect(page.locator('#snapshot-archive-select option')).toHaveCount(2);
+  await expect(page.locator('#snapshot-archive-select option')).toHaveCount(initialSnapshotCount + 2);
   await expect(page.locator('#snapshot-archive-select')).toContainText('Branch');
 
   const today = await page.evaluate(() => new Date().toISOString().slice(0, 10));
@@ -769,7 +776,7 @@ test('snapshot archive filtering rename duplicate delete and restore', async ({ 
   await page.locator('#snapshot-archive-select').selectOption({ value: originalId });
   await page.locator('#snapshot-archive-delete-btn').click();
   await acceptConfirm(page);
-  await expect(page.locator('#snapshot-archive-select option')).toHaveCount(1);
+  await expect(page.locator('#snapshot-archive-select option')).toHaveCount(initialSnapshotCount + 1);
   await expect(page.locator('#snapshot-archive-select')).toContainText('Branch');
 
   await title.evaluate((element) => {
