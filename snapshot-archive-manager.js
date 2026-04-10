@@ -94,6 +94,15 @@ export function createSnapshotArchiveManager(options) {
     return library;
   }
 
+  function restoreSnapshot(snapshot) {
+    if (!snapshot) {
+      notify.error('No snapshot provided for restoration.');
+      return;
+    }
+    console.log('Restoring snapshot:', snapshot);
+    // Add logic to handle the snapshot restoration
+  }
+
   return {
     load,
     restoreSnapshot,
