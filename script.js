@@ -1,3 +1,17 @@
+function registerRootServiceWorker() {
+  if (typeof window === 'undefined' || !('serviceWorker' in navigator)) {
+    return;
+  }
+
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('./sw.js', { scope: './' }).catch(function (err) {
+      console.warn('Service worker registration failed for root-hosted mode.', err);
+    });
+  });
+}
+
+registerRootServiceWorker();
+
 const pinsContainer = document.getElementById('pinsContainer');
 const addVendorBtn = document.getElementById('add-vendor');
 const saveStateBtn = document.getElementById('save-state');
@@ -359,44 +373,17 @@ const baseMapCanvasSize = {
   width: 0,
   height: 0
 };
-let mapCanvasLayoutSyncFrame = null;
-
-function scheduleMapCanvasLayoutSync() {
-  if (mapCanvasLayoutSyncFrame !== null) return;
-  const raf = typeof window.requestAnimationFrame === 'function'
-    ? window.requestAnimationFrame.bind(window)
-    : function (callback) { return window.setTimeout(callback, 16); };
-
-  mapCanvasLayoutSyncFrame = raf(() => {
-    mapCanvasLayoutSyncFrame = null;
-    syncMapCanvasLayout();
-  });
-}
 
 function getBaseMapCanvasSize() {
+  if (baseMapCanvasSize.width > 0 && baseMapCanvasSize.height > 0) {
+    return baseMapCanvasSize;
+  }
+
   const width = Math.max(1, mapArea.clientWidth || mapArea.offsetWidth || 1200);
   const height = Math.max(1, mapArea.clientHeight || mapArea.offsetHeight || 800);
-  if (baseMapCanvasSize.width !== width || baseMapCanvasSize.height !== height) {
-    baseMapCanvasSize.width = width;
-    baseMapCanvasSize.height = height;
-  }
+  baseMapCanvasSize.width = width;
+  baseMapCanvasSize.height = height;
   return baseMapCanvasSize;
-}
-
-function syncMapCanvasLayout() {
-  const baseSize = getBaseMapCanvasSize();
-  mapContent.style.width = `${Math.round(baseSize.width * appState.backgroundScale)}px`;
-  mapContent.style.height = `${Math.round(baseSize.height * appState.backgroundScale)}px`;
-
-  pinsContainer.querySelectorAll('.vendor-pin').forEach((pin) => {
-    const vendor = appState.vendors.find((v) => v.id === Number(pin.dataset.id));
-    if (vendor) {
-      applyPinPosition(vendor, pin);
-    }
-  });
-
-  applyMapCongestionKeySizeClamped({ persist: false });
-  applyMapCongestionKeyPositionClamped({ persist: false });
 }
 
 const snapshotArchiveStorage = window.createSnapshotArchiveStorage({
@@ -432,44 +419,11 @@ const actions = {
     patchState({ mapTitleText: sanitizeText(text, 'Farmers Market Vendor Map', 80) });
   },
   addVendorRecord(initial) {
-    // If coordinates are not provided, compute a viewport-relative spawn point
-    let x = initial.x;
-    let y = initial.y;
-    try {
-      if (!Number.isFinite(Number(x)) || !Number.isFinite(Number(y))) {
-        const mapContentEl = document.getElementById('mapContent');
-        const areaRect = mapArea && mapArea.getBoundingClientRect ? mapArea.getBoundingClientRect() : null;
-        const mapRect = mapContentEl && mapContentEl.getBoundingClientRect ? mapContentEl.getBoundingClientRect() : null;
-        const zoom = (typeof panZoomTools !== 'undefined' && panZoomTools && typeof panZoomTools.getZoomLevel === 'function') ? panZoomTools.getZoomLevel() : 1;
-        const bgScale = Number(appState.backgroundScale) || 1;
-        if (areaRect && mapRect) {
-          const offsetX = Math.round(areaRect.width * 0.15);
-          const offsetY = Math.round(areaRect.height * 0.12);
-          let displayX = (areaRect.left - mapRect.left + offsetX) / Math.max(0.0001, zoom);
-          let displayY = (areaRect.top - mapRect.top + offsetY) / Math.max(0.0001, zoom);
-          try {
-            const maxDisplayX = Math.max(0, mapContentEl.offsetWidth - 8);
-            const maxDisplayY = Math.max(0, mapContentEl.offsetHeight - 8);
-            displayX = Math.min(maxDisplayX, Math.max(0, displayX));
-            displayY = Math.min(maxDisplayY, Math.max(0, displayY));
-          } catch (e) { /* ignore clamp errors */ }
-          x = displayX / Math.max(0.0001, bgScale);
-          y = displayY / Math.max(0.0001, bgScale);
-        } else {
-          x = 60;
-          y = 60;
-        }
-      }
-    } catch (e) {
-      x = Number.isFinite(Number(initial.x)) ? initial.x : 60;
-      y = Number.isFinite(Number(initial.y)) ? initial.y : 60;
-    }
-
     const vendor = {
       id: appState.nextId,
       name: initial.name,
-      x: x,
-      y: y,
+      x: initial.x,
+      y: initial.y,
       templateId: initial.templateId || null,
       categoryId: initial.categoryId || null
     };
@@ -538,9 +492,22 @@ const addMapPanHandlers = panZoomTools.addMapPanHandlers;
 
 function applyBackgroundScale() {
   actions.setBackgroundScale(Math.min(BACKGROUND_SCALE_MAX, Math.max(BACKGROUND_SCALE_MIN, appState.backgroundScale)));
-  syncMapCanvasLayout();
+  const baseSize = getBaseMapCanvasSize();
+  mapContent.style.width = `${Math.round(baseSize.width * appState.backgroundScale)}px`;
+  mapContent.style.height = `${Math.round(baseSize.height * appState.backgroundScale)}px`;
+
+  // Re-align existing pins to current background scale
+  pinsContainer.querySelectorAll('.vendor-pin').forEach((pin) => {
+    const vendor = appState.vendors.find((v) => v.id === Number(pin.dataset.id));
+    if (vendor) {
+      applyPinPosition(vendor, pin);
+    }
+  });
+
   bgSizeRange.value = appState.backgroundScale;
   bgSizeValue.textContent = `${Math.round(appState.backgroundScale * 100)}%`;
+  applyMapCongestionKeySizeClamped({ persist: false });
+  applyMapCongestionKeyPositionClamped({ persist: false });
 }
 
 function clampMapCongestionKeySize(size) {
@@ -689,18 +656,8 @@ async function confirmMapCongestionKeyDragArm() {
           cancelLabel: 'Cancel'
         }
       );
-    } else if (notify && typeof notify.action === 'function') {
-      const choice = await notify.action(
-        'Enable touch drag for the map congestion key? Drag mode will turn off after you drop it.',
-        [
-          { id: 'enable', label: 'Enable Drag', primary: true },
-          { id: 'cancel', label: 'Cancel' }
-        ],
-        { timeout: 12000 }
-      );
-      accepted = choice === 'enable';
     } else {
-      accepted = false;
+      accepted = window.confirm('Enable touch drag for the map congestion key?');
     }
   } finally {
     mapCongestionKeyDragState.pendingConfirm = false;
@@ -1175,8 +1132,7 @@ function syncTemplatePinsToActiveState() {
   appState.vendorTemplates.forEach((template) => {
     const linkedVendor = appState.vendors.find((vendor) => vendor.templateId === template.id);
     if (template.active && !linkedVendor) {
-      // Let addVendorRecord compute viewport-relative coords
-      addVendor({ name: template.name, templateId: template.id });
+      addVendor({ name: template.name, x: 80 + appState.vendors.length * 20, y: 80 + appState.vendors.length * 20, templateId: template.id });
       return;
     }
     if (!template.active && linkedVendor) {
@@ -1521,83 +1477,6 @@ const storageSyncTools = window.createStorageSyncTools({
   onRemoteChange: (details) => {
     document.body.classList.add('storage-sync-stale');
     window.__lastRemoteStorageChange = details;
-
-    // If storage-sync provided a safe merged JSON, offer the user a one-click merge.
-    if (details && details.mergedValue) {
-      try {
-        const parsed = JSON.parse(details.mergedValue);
-        const normalize = typeof window.normalizeMapState === 'function'
-          ? window.normalizeMapState
-          : null;
-        const defaults = typeof getNormalizationDefaults === 'function'
-          ? getNormalizationDefaults()
-          : {};
-        const normalized = normalize ? normalize(parsed, defaults) : parsed;
-        const valid = typeof isNormalizedMapStateValid === 'function'
-          ? isNormalizedMapStateValid(normalized)
-          : true;
-        if (!valid) {
-          // Invalid merged value — save for inspection but don't apply.
-          try { localStorage.setItem(STORAGE_KEY, details.mergedValue); } catch (e) { /* ignore */ }
-          if (notify && typeof notify.warn === 'function') notify.warn('Received remote changes could not be validated and were saved for inspection.');
-          return;
-        }
-
-        // Show a non-blocking toast offering Merge or Ignore actions.
-        try {
-          const vendorCount = Array.isArray(parsed && parsed.vendors) ? parsed.vendors.length : 0;
-          const summary = vendorCount > 0
-            ? `Remote changes: ${vendorCount} vendor${vendorCount === 1 ? '' : 's'} available to merge.`
-            : 'Remote changes detected from another tab.';
-
-          const actions = [
-            { id: 'merge', label: 'Merge', primary: true },
-            { id: 'ignore', label: 'Ignore' }
-          ];
-
-          // notify.action resolves to the chosen action id, or null on timeout/dismiss.
-          if (notify && typeof notify.action === 'function') {
-            notify.action(summary, actions, { timeout: 12000 }).then((choice) => {
-              if (choice === 'merge') {
-                applyNormalizedLoadedState(normalized);
-                if (notify && typeof notify.info === 'function') notify.info('Merged remote changes applied.');
-              } else {
-                try { localStorage.setItem(STORAGE_KEY, details.mergedValue); } catch (e) { /* ignore */ }
-                if (notify && typeof notify.info === 'function') notify.info('Merged remote changes saved locally; reload to view.');
-              }
-            }).catch(() => {
-              try { localStorage.setItem(STORAGE_KEY, details.mergedValue); } catch (e) { /* ignore */ }
-            });
-          } else if (typeof window.showConfirmAsync === 'function') {
-            window.showConfirmAsync(summary + ' Merge now?', {
-              title: 'Remote Changes Detected',
-              acceptLabel: 'Merge',
-              cancelLabel: 'Ignore'
-            }).then((accepted) => {
-              if (accepted) {
-                applyNormalizedLoadedState(normalized);
-                if (notify && typeof notify.info === 'function') notify.info('Merged remote changes applied.');
-              } else {
-                try { localStorage.setItem(STORAGE_KEY, details.mergedValue); } catch (e) { /* ignore */ }
-                if (notify && typeof notify.info === 'function') notify.info('Merged remote changes saved locally; reload to view.');
-              }
-            }).catch(() => {
-              try { localStorage.setItem(STORAGE_KEY, details.mergedValue); } catch (e) { /* ignore */ }
-            });
-          } else {
-            // No dialog helpers available; preserve data and avoid blocking native dialogs.
-            try { localStorage.setItem(STORAGE_KEY, details.mergedValue); } catch (e) { /* ignore */ }
-            if (notify && typeof notify.info === 'function') notify.info('Merged remote changes saved locally; reload to view.');
-          }
-        } catch (err) {
-          try { localStorage.setItem(STORAGE_KEY, details.mergedValue); } catch (e) { /* ignore */ }
-        }
-
-        return;
-      } catch (err) {
-        console.error('Failed to process merged remote state', err);
-      }
-    }
   }
 });
 
@@ -1652,7 +1531,6 @@ function applyNormalizedLoadedState(normalized) {
   appState.vendors.forEach(createPin);
   renderTemplateList();
   updateVendorList();
-  scheduleMapCanvasLayoutSync();
 }
 
 const persistenceTools = window.createPersistenceTools({
@@ -1734,48 +1612,6 @@ const exportMapAsPdf = exportTools.exportMapAsPdf;
 
 function loadState(config) {
   return checkpointTools.loadState(config);
-}
-
-const LIFECYCLE_FLUSH_INTERVAL_MS = 400;
-let lastLifecycleFlushAt = 0;
-
-function flushStateForLifecycle(reason) {
-  const now = Date.now();
-  if (now - lastLifecycleFlushAt < LIFECYCLE_FLUSH_INTERVAL_MS) {
-    return;
-  }
-  lastLifecycleFlushAt = now;
-
-  try {
-    checkpointTools.commit({
-      reason: reason || 'lifecycle-flush',
-      persist: true,
-      saveRecovery: false,
-      pushHistory: false
-    });
-  } catch (err) {
-    console.warn('Failed to flush map state during lifecycle transition.', err);
-  }
-}
-
-function bindLifecyclePersistence() {
-  if (typeof window === 'undefined' || typeof window.addEventListener !== 'function') {
-    return;
-  }
-
-  window.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'hidden') {
-      flushStateForLifecycle('visibility-hidden');
-    }
-  });
-
-  window.addEventListener('pagehide', () => {
-    flushStateForLifecycle('page-hide');
-  });
-
-  window.addEventListener('beforeunload', () => {
-    flushStateForLifecycle('before-unload');
-  });
 }
 
 function resetMap() {
@@ -1888,13 +1724,10 @@ window.initializeAppState({
   pushHistorySnapshot
 });
 
-bindLifecyclePersistence();
-
 storageSyncTools.bindStorageSyncListener();
 
 const exportJpgBtn = document.getElementById('export-jpg');
 const exportPdfBtn = document.getElementById('export-pdf');
-const printMapBtn = document.getElementById('print-map');
 
 window.bindCoreEventListeners({
   appState,
@@ -1905,7 +1738,6 @@ window.bindCoreEventListeners({
   applyPinTransform,
   applyBackgroundScale,
   applyBackgroundOpacity,
-  syncMapCanvasLayout,
   updateBgScaleLockButton,
   updatePinControlVisibility,
   updatePinCategoryVisibility,
@@ -1974,7 +1806,6 @@ window.bindCoreEventListeners({
     bgFileInput,
     exportJpgBtn,
     exportPdfBtn,
-    printMapBtn,
     exportMapAsImage,
     exportMapAsPdf
   }

@@ -4,7 +4,7 @@
     "src": "assets/icons.svg"
   },
   "index.html": {
-    "file": "assets/index-CPymRHRa.js",
+    "file": "assets/index-DGceljwF.js",
     "name": "index",
     "src": "index.html",
     "isEntry": true,
@@ -12,7 +12,12 @@
       "assets/index-NRCy97ek.css"
     ],
     "assets": [
+      "assets/manifest-vKirWI-e.webmanifest",
       "assets/icons-DuEQaUzv.svg"
     ]
+  },
+  "public/manifest.webmanifest": {
+    "file": "assets/manifest-vKirWI-e.webmanifest",
+    "src": "public/manifest.webmanifest"
   }
 }
