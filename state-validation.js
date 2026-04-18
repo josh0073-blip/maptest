@@ -16,7 +16,7 @@
   function sanitizeEditableText(value, fallback, maxLength) {
     const fallbackText = String(fallback || '').trim() || 'Untitled';
     const raw = String(value || '');
-    const withoutUnsafeChars = raw.replace(/[<>"'&]/g, '');
+    const withoutUnsafeChars = raw.replace(/[<>&]/g, '');
     const compact = withoutUnsafeChars.replace(/\s+/g, ' ').trim();
     const clipped = maxLength > 0 ? compact.slice(0, maxLength) : compact;
     return clipped || fallbackText;
