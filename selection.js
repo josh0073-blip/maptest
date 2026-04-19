@@ -141,6 +141,8 @@
       hideLassoBox();
       document.removeEventListener('mousemove', onLassoMouseMove);
       document.removeEventListener('mouseup', onLassoMouseUp);
+      document.removeEventListener('pointermove', onLassoMouseMove);
+      document.removeEventListener('pointerup', onLassoMouseUp);
     }
 
     function onLassoMouseMove(event) {
@@ -402,7 +404,7 @@
       }
     });
 
-    pinsContainer.addEventListener('mousedown', function (e) {
+    function beginLassoSelection(e, usePointer) {
       if (e.button !== 0) return;
       if (e.altKey) return;
       if (isEditableTarget(e.target)) return;
@@ -417,9 +419,25 @@
       lassoState.endX = start.x;
       lassoState.endY = start.y;
       setLassoBox(getRectBounds(start.x, start.y, start.x, start.y));
-      document.addEventListener('mousemove', onLassoMouseMove);
-      document.addEventListener('mouseup', onLassoMouseUp);
+
+      if (usePointer) {
+        document.addEventListener('pointermove', onLassoMouseMove);
+        document.addEventListener('pointerup', onLassoMouseUp);
+      } else {
+        document.addEventListener('mousemove', onLassoMouseMove);
+        document.addEventListener('mouseup', onLassoMouseUp);
+      }
+
       e.preventDefault();
+    }
+
+    pinsContainer.addEventListener('mousedown', function (e) {
+      beginLassoSelection(e, false);
+    });
+
+    pinsContainer.addEventListener('pointerdown', function (e) {
+      if (e.pointerType === 'mouse') return;
+      beginLassoSelection(e, true);
     });
 
     document.addEventListener('keydown', function (e) {
