@@ -30,9 +30,10 @@
 
         <p class="control-subtitle">Save and load the current layout.</p>
         <div class="control-row control-row--split">
-          <button id="save-state" aria-label="Save Map">Save Map</button>
-          <button id="load-state" aria-label="Load Map">Load Map</button>
+          <button id="save-state" aria-label="Save Map State">Save Map State</button>
+          <button id="load-state" aria-label="Load Map State">Load Map State</button>
         </div>
+        <p class="control-note">This saves state in browser storage. Use the archive section for named version snapshots.</p>
 
         <p class="control-subtitle">Export the current layout.</p>
         <div class="control-row control-row--split">
@@ -133,10 +134,10 @@
 
         <p class="control-subtitle">Background Library</p>
         <input id="bg-lib-name-input" class="input-full mb-6" type="text" placeholder="Library name" />
-        <button id="bg-lib-save-btn">Save Current Background</button>
+        <button id="bg-lib-save-btn">Save Background to Library</button>
         <select id="bg-lib-select" class="select-list" size="6"></select>
         <div class="control-row control-row--split">
-          <button id="bg-lib-apply-btn">Apply Selected</button>
+          <button id="bg-lib-apply-btn">Apply Selected Background</button>
           <button id="bg-lib-rename-btn">Rename Selected</button>
         </div>
         <div class="control-row control-row--split">
@@ -168,10 +169,10 @@
 
         <p class="control-subtitle">Saved Lists</p>
         <input id="vendor-lib-name-input" class="input-full mb-6" type="text" placeholder="List name" />
-        <button id="vendor-lib-save-btn">Save Current Templates</button>
+        <button id="vendor-lib-save-btn">Save Current List</button>
         <select id="vendor-lib-select" class="select-list" size="6"></select>
         <select id="vendor-lib-load-mode" class="select-full mb-6">
-          <option value="replace">Replace Current Templates</option>
+          <option value="replace">Replace Current List</option>
           <option value="merge-unique">Merge Unique Names</option>
           <option value="merge-keep-status">Merge and Keep Status</option>
         </select>
@@ -181,10 +182,10 @@
         </div>
         <div class="control-row control-row--split">
           <button id="vendor-lib-delete-btn">Delete Selected</button>
-          <button id="vendor-lib-export-json-btn">Export JSON</button>
+          <button id="vendor-lib-export-json-btn">Export List JSON</button>
         </div>
         <div class="control-row control-row--split">
-          <button id="vendor-lib-export-csv-btn">Export CSV</button>
+          <button id="vendor-lib-export-csv-btn">Export List CSV</button>
         </div>
         <input id="vendor-lib-import-input" class="file-full" type="file" accept=".json,.csv" />
       </details>
@@ -192,7 +193,7 @@
       <details class="control-group">
         <summary class="control-group__title">Versioning / Restore</summary>
         <p class="control-subtitle">Capture named snapshots and restore map versions quickly.</p>
-        <button id="snapshot-export-btn">Export Snapshot JSON</button>
+        <button id="snapshot-export-btn">Export Snapshot</button>
         <label class="field-label" for="snapshot-archive-name-input">Archive name</label>
         <input id="snapshot-archive-name-input" class="input-full mb-6" type="text" placeholder="e.g. Market Layout - 2026-04-05" />
         <label class="field-label" for="snapshot-archive-event-tag-input">Event tag (optional)</label>
@@ -201,7 +202,7 @@
           <input id="snapshot-archive-auto-tag-toggle" type="checkbox" checked />
           Auto-tag snapshots with date and map title
         </label>
-        <button id="snapshot-archive-save-btn">Save Current Map To Archive Library</button>
+        <button id="snapshot-archive-save-btn">Save to Archive</button>
         <label class="field-label" for="snapshot-archive-select">Archived snapshots</label>
         <input id="snapshot-archive-search-input" class="input-full mb-6" type="text" placeholder="Search by name or tag" />
         <div class="control-row control-row--split">
@@ -234,8 +235,8 @@
         <ol class="control-note instructions-list">
           <li>Drag pins to position them on the background map.</li>
           <li>Double-click vendor text to edit inline.</li>
-          <li>Use save/load for localStorage state.</li>
-          <li>Use checkbox list to activate/deactivate vendors.</li>
+          <li>Save and load map state in browser storage; archive keeps named snapshots.</li>
+          <li>Use the vendor template checkbox list to activate or deactivate items.</li>
           <li>Click ↻ on pin to rotate by 45°.</li>
           <li>Upload CSV to batch add vendor templates.</li>
         </ol>
