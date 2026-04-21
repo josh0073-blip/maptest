@@ -31,6 +31,8 @@ const mapCongestionKeyPanel = document.getElementById('map-congestion-key-panel'
 const mapCongestionKeyList = document.getElementById('map-congestion-key-list');
 const mapCongestionKeyDragHandle = document.getElementById('map-congestion-key-drag-handle');
 const mapCongestionKeyResizeHandle = document.getElementById('map-congestion-key-resize-handle');
+const appVersionInfo = document.getElementById('app-version');
+const appLastUpdatedInfo = document.getElementById('app-last-updated');
 
 const bgUrlInput = document.getElementById('bg-url-input');
 const bgUrlBtn = document.getElementById('bg-url-btn');
@@ -56,6 +58,26 @@ const csvFileInput = document.getElementById('csv-file-input');
 const csvUploadBtn = document.getElementById('csv-upload-btn');
 const templateNameInput = document.getElementById('template-name-input');
 const templateAddBtn = document.getElementById('template-add-btn');
+
+function formatAppDate(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '--/--/--';
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const year = String(date.getFullYear()).slice(-2);
+  return `${month}/${day}/${year}`;
+}
+
+const appVersionValue = (typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '1.0.0');
+const appLastUpdatedValue = (typeof __APP_LAST_UPDATED__ !== 'undefined' && __APP_LAST_UPDATED__) ? __APP_LAST_UPDATED__ : formatAppDate(document.lastModified || Date.now());
+
+if (appVersionInfo) {
+  appVersionInfo.textContent = `Version ${appVersionValue}`;
+}
+
+if (appLastUpdatedInfo) {
+  appLastUpdatedInfo.textContent = `App last updated on ${appLastUpdatedValue}`;
+}
 const templateList = document.getElementById('template-list');
 const templateCounter = document.getElementById('template-counter');
 const selectAllBtn = document.getElementById('select-all-btn');

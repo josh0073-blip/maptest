@@ -1,6 +1,7 @@
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import fs from 'node:fs';
+import { execSync } from 'node:child_process';
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
@@ -15,7 +16,16 @@ const resolveAlias = depsRoot
       'workbox-window': path.resolve(depsRoot, 'node_modules/workbox-window/index.mjs')
     }
   : undefined;
-
+const pkg = require('./package.json');
+let appLastUpdated = '';
+try {
+  const gitDate = execSync('git log -1 --format=%cd --date=short', { cwd: workspaceRoot, stdio: 'pipe' }).toString('utf8').trim();
+  const [year, month, day] = gitDate.split('-');
+  appLastUpdated = `${month}/${day}/${year.slice(-2)}`;
+} catch (error) {
+  const fallback = new Date().toISOString().slice(0, 10).split('-');
+  appLastUpdated = `${fallback[1]}/${fallback[2]}/${fallback[0].slice(-2)}`;
+}
 function bootstrapBackgroundFileListPlugin() {
   const bootstrapBackgroundDir = path.resolve(workspaceRoot, 'public/bootstrap-backgrounds');
   const bootstrapVendorListDir = path.resolve(workspaceRoot, 'public/bootstrap-vendor-lists');
@@ -135,6 +145,10 @@ export default defineConfig({
   base: '/maptest/', // Set base path for GitHub Pages
   resolve: {
     alias: resolveAlias
+  },
+  define: {
+    __APP_VERSION__: JSON.stringify(pkg.version || '1.0.0'),
+    __APP_LAST_UPDATED__: JSON.stringify(appLastUpdated)
   },
   plugins: [
     VitePWA(),
