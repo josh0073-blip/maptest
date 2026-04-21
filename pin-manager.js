@@ -113,10 +113,7 @@
       });
 
       label.addEventListener('input', () => {
-        vendor.name = sanitizeText(label.textContent, 'Vendor', 80);
-        if (label.textContent !== vendor.name) {
-          label.textContent = vendor.name;
-        }
+        vendor.name = label.textContent;
         setPinCategory(vendor, pin, vendor.categoryId);
         updateVendorList();
       });

@@ -414,10 +414,13 @@
       mapTitle.textContent = appState.mapTitleText;
       mapTitle.addEventListener('input', () => {
         actions.setMapTitleText(mapTitle.textContent || 'Farmers Market Vendor Map');
-        if (mapTitle.textContent !== appState.mapTitleText) {
-          mapTitle.textContent = appState.mapTitleText;
-        }
         persistState();
+      });
+      mapTitle.addEventListener('blur', () => {
+        const desiredText = appState.mapTitleText || 'Farmers Market Vendor Map';
+        if (mapTitle.textContent !== desiredText) {
+          mapTitle.textContent = desiredText;
+        }
       });
     }
 
