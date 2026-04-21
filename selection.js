@@ -172,57 +172,53 @@
       return 'top';
     }
 
-    function getTransformedLocalBounds(item) {
-      const width = item.width;
-      const height = item.height;
-      const rotation = ((Number(item.vendor.rotation) || 0) * Math.PI) / 180;
-      const scaleX = Number(item.vendor.size) || 1;
-      const scaleY = (Number(item.vendor.size) || 1) * (Number(item.vendor.height) || 1);
-      const cos = Math.cos(rotation);
-      const sin = Math.sin(rotation);
+    function getPinTransformMatrix(pin) {
+      const computedStyle = window.getComputedStyle(pin);
+      const transformValue = computedStyle.transform || 'none';
+      try {
+        return transformValue === 'none' ? new DOMMatrix() : new DOMMatrix(transformValue);
+      } catch (err) {
+        return new DOMMatrix();
+      }
+    }
 
-      const points = [
-        { x: 0, y: 0 },
-        { x: width, y: 0 },
-        { x: 0, y: height },
-        { x: width, y: height }
-      ].map(function (p) {
-        const sx = p.x * scaleX;
-        const sy = p.y * scaleY;
-        return {
-          x: (sx * cos) - (sy * sin),
-          y: (sx * sin) + (sy * cos)
-        };
-      });
-
-      return {
-        minX: Math.min.apply(null, points.map(function (p) { return p.x; })),
-        maxX: Math.max.apply(null, points.map(function (p) { return p.x; })),
-        minY: Math.min.apply(null, points.map(function (p) { return p.y; })),
-        maxY: Math.max.apply(null, points.map(function (p) { return p.y; }))
-      };
+    function getPinLocalAnchor(pin, vendor) {
+      const width = pin.offsetWidth;
+      const height = pin.offsetHeight;
+      const refX = getVendorAlignRefX(vendor);
+      const refY = getVendorAlignRefY(vendor);
+      const anchorX = refX === 'center' ? width / 2 : refX === 'right' ? width : 0;
+      const anchorY = refY === 'middle' ? height / 2 : refY === 'bottom' ? height : 0;
+      return { x: anchorX, y: anchorY };
     }
 
     function getAnchorDisplayPosition(item) {
-      const bounds = getTransformedLocalBounds(item);
-      const refX = getVendorAlignRefX(item.vendor);
-      const refY = getVendorAlignRefY(item.vendor);
-
-      const anchorX = refX === 'center'
-        ? (bounds.minX + bounds.maxX) / 2
-        : refX === 'right'
-          ? bounds.maxX
-          : bounds.minX;
-
-      const anchorY = refY === 'middle'
-        ? (bounds.minY + bounds.maxY) / 2
-        : refY === 'bottom'
-          ? bounds.maxY
-          : bounds.minY;
-
+      const localAnchor = getPinLocalAnchor(item.pin, item.vendor);
+      const matrix = getPinTransformMatrix(item.pin);
+      const transformed = matrix.transformPoint(new DOMPoint(localAnchor.x, localAnchor.y));
       return {
-        x: item.left + anchorX,
-        y: item.top + anchorY
+        x: item.left + transformed.x,
+        y: item.top + transformed.y
+      };
+    }
+
+    function getTransformedLocalBounds(pin) {
+      const width = pin.offsetWidth;
+      const height = pin.offsetHeight;
+      const matrix = getPinTransformMatrix(pin);
+      const corners = [
+        new DOMPoint(0, 0),
+        new DOMPoint(width, 0),
+        new DOMPoint(0, height),
+        new DOMPoint(width, height)
+      ].map(function (point) {
+        return matrix.transformPoint(point);
+      });
+      return {
+        minX: Math.min.apply(null, corners.map(function (p) { return p.x; })),
+        maxX: Math.max.apply(null, corners.map(function (p) { return p.x; })),
+        minY: Math.min.apply(null, corners.map(function (p) { return p.y; })),
+        maxY: Math.max.apply(null, corners.map(function (p) { return p.y; }))
       };
     }
 
@@ -234,13 +230,7 @@
         };
       }
 
-      const tempItem = {
-        pin: pin,
-        vendor: vendor,
-        width: pin.offsetWidth,
-        height: pin.offsetHeight
-      };
-      const localBounds = getTransformedLocalBounds(tempItem);
+      const localBounds = getTransformedLocalBounds(pin);
       let adjustedX = nextDisplayX;
       let adjustedY = nextDisplayY;
 
@@ -276,9 +266,7 @@
           pin: pin,
           vendor: vendor,
           left: left,
-          top: top,
-          width: pin.offsetWidth,
-          height: pin.offsetHeight
+          top: top
         };
       }).filter(Boolean);
 
