@@ -19,14 +19,22 @@
       <p>Use this page to place/edit vendor names on the map.</p>
 
       <details class="control-group">
-        <summary class="control-group__title">Map Session</summary>
-        <p class="control-subtitle">Create, save, restore, and export your current market layout.</p>
+        <summary class="control-group__title">Quick Actions</summary>
+        <p class="control-subtitle">Use the most common editing commands for the current map.</p>
         <button id="add-vendor" aria-label="Add Vendor Pin">Add Vendor</button>
-        <button id="save-state" aria-label="Save Map">Save Map</button>
-        <button id="load-state" aria-label="Load Map">Load Map</button>
-        <button id="undo-btn" aria-label="Undo">Undo</button>
-        <button id="redo-btn" aria-label="Redo">Redo</button>
+        <div class="control-row control-row--split">
+          <button id="undo-btn" aria-label="Undo">Undo</button>
+          <button id="redo-btn" aria-label="Redo">Redo</button>
+        </div>
         <button id="reset-map" aria-label="Reset Map">Reset Map</button>
+
+        <p class="control-subtitle">Save and load the current layout.</p>
+        <div class="control-row control-row--split">
+          <button id="save-state" aria-label="Save Map">Save Map</button>
+          <button id="load-state" aria-label="Load Map">Load Map</button>
+        </div>
+
+        <p class="control-subtitle">Export the current layout.</p>
         <div class="control-row control-row--split">
           <button id="export-jpg" aria-label="Export JPG">Export JPG</button>
           <button id="export-pdf" aria-label="Export PDF">Export PDF</button>
@@ -104,8 +112,8 @@
       </details>
 
       <details class="control-group">
-        <summary class="control-group__title">Background Setup</summary>
-        <p class="control-subtitle">Set source image and adjust background scale for pin alignment.</p>
+        <summary class="control-group__title">Background</summary>
+        <p class="control-subtitle">Set the background image and manage saved background entries.</p>
         <input id="bg-url-input" class="input-full mb-6" type="text" placeholder="Image URL" />
         <button id="bg-url-btn">Set background URL</button>
         <input id="bg-file-input" class="file-full mt-8" type="file" accept="image/*" />
@@ -122,10 +130,8 @@
           <span id="bg-opacity-value">100%</span>
         </div>
         <p class="control-note">Adjust scale to align the background with your pin layout.</p>
-      </details>
 
-      <details class="control-group">
-        <summary class="control-group__title">Background Library</summary>
+        <p class="control-subtitle">Background Library</p>
         <input id="bg-lib-name-input" class="input-full mb-6" type="text" placeholder="Library name" />
         <button id="bg-lib-save-btn">Save Current Background</button>
         <select id="bg-lib-select" class="select-list" size="6"></select>
@@ -141,7 +147,8 @@
       </details>
 
       <details class="control-group">
-        <summary class="control-group__title">Vendor Templates</summary>
+        <summary class="control-group__title">Vendor Lists</summary>
+        <p class="control-subtitle">Current List</p>
         <div class="vendor-template-controls">
           <input id="template-name-input" class="input-full mb-6" type="text" placeholder="New vendor name" />
           <button id="template-add-btn">Add to list</button>
@@ -158,10 +165,8 @@
         </div>
         <div id="template-counter" class="template-counter" aria-live="polite">Vendors: 0 | Active: 0</div>
         <div id="template-list" class="template-list"></div>
-      </details>
 
-      <details class="control-group">
-        <summary class="control-group__title">Template Library</summary>
+        <p class="control-subtitle">Saved Lists</p>
         <input id="vendor-lib-name-input" class="input-full mb-6" type="text" placeholder="List name" />
         <button id="vendor-lib-save-btn">Save Current Templates</button>
         <select id="vendor-lib-select" class="select-list" size="6"></select>
@@ -185,9 +190,9 @@
       </details>
 
       <details class="control-group">
-        <summary class="control-group__title">Backup and Archive</summary>
+        <summary class="control-group__title">Versioning / Restore</summary>
         <p class="control-subtitle">Capture named snapshots and restore map versions quickly.</p>
-        <button id="snapshot-export-btn">Export Full Snapshot</button>
+        <button id="snapshot-export-btn">Export Snapshot JSON</button>
         <label class="field-label" for="snapshot-archive-name-input">Archive name</label>
         <input id="snapshot-archive-name-input" class="input-full mb-6" type="text" placeholder="e.g. Market Layout - 2026-04-05" />
         <label class="field-label" for="snapshot-archive-event-tag-input">Event tag (optional)</label>
