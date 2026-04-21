@@ -1922,6 +1922,7 @@ selectionTools = window.initializeRuntime({
     pinCategoryPicker,
     pinAlignRefXSelect,
     pinAlignRefYSelect,
-    pinAlignRefApplyBtn
+    pinAlignRefApplyBtn,
+    removeVendor
   })
 });

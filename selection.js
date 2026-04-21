@@ -10,6 +10,7 @@
     const persistState = options.persistState;
     const setPinStatus = options.setPinStatus;
     const setPinCategory = options.setPinCategory;
+    const removeVendor = options.removeVendor;
     const pinColorPicker = options.pinColorPicker;
     const pinStatusPicker = options.pinStatusPicker;
     const pinCategoryPicker = options.pinCategoryPicker;
@@ -380,6 +381,23 @@
       updatePinSelection();
     }
 
+    function clearSelectedPins() {
+      if (!selectedPins.size) return;
+      selectedPins.clear();
+      updatePinSelection();
+    }
+
+    function deleteSelectedPins() {
+      if (!selectedPins.size || typeof removeVendor !== 'function') return;
+      const ids = Array.from(selectedPins);
+      ids.forEach(function (id) {
+        removeVendor(id);
+      });
+      selectedPins.clear();
+      updatePinSelection();
+      persistState();
+    }
+
     pinsContainer.addEventListener('pointerdown', function (e) {
       const pin = e.target.closest('.vendor-pin');
       if (!pin) return;
@@ -442,6 +460,34 @@
 
     document.addEventListener('keydown', function (e) {
       if (isEditableTarget(e.target)) return;
+
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
+        e.preventDefault();
+        if (!pinsContainer) return;
+        selectedPins.clear();
+        pinsContainer.querySelectorAll('.vendor-pin').forEach(function (pin) {
+          selectedPins.add(Number(pin.dataset.id));
+        });
+        updatePinSelection();
+        return;
+      }
+
+      if (e.key === 'Escape') {
+        if (selectedPins.size) {
+          clearSelectedPins();
+          e.preventDefault();
+        }
+        return;
+      }
+
+      if (e.key === 'Delete') {
+        if (selectedPins.size) {
+          deleteSelectedPins();
+          e.preventDefault();
+        }
+        return;
+      }
+
       if (!selectedPins.size) return;
       const stepDisplay = e.shiftKey ? 20 : 5;
       const moved = nudgeSelectedPins(e.key, stepDisplay);
