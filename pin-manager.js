@@ -199,7 +199,6 @@
         if (event.target.closest('button')) return;
         const clickedLabel = event.target.closest('.label');
         if (clickedLabel && clickedLabel.isContentEditable) return;
-        if (clickedLabel && event.pointerType === 'mouse') return;
 
         event.stopPropagation();
         startDrag(event, pin, vendor);
