@@ -206,18 +206,26 @@ body {
   overflow-y: auto;
 }
 
+.sidebar-header {
+  margin-bottom: 16px;
+}
+
 .sidebar h1 {
-  margin: 0 0 6px 0;
+  margin: 0 0 4px 0;
   font-size: 1.3rem;
   color: #0f172a;
 }
 
 .sidebar .app-version,
 .sidebar .app-last-updated {
-  margin: 0 0 6px 0;
-  font-size: 12px;
+  margin: 0 0 4px 0;
+  font-size: 13px;
   color: var(--sidebar-text-muted);
-  line-height: 1.4;
+  line-height: 1.45;
+}
+
+.sidebar .app-version {
+  font-weight: 600;
 }
 
 .sidebar > p {
