@@ -182,6 +182,23 @@ test('double-clicking pin label enables inline editing', async ({ page }) => {
   await expect(page.locator('#template-list')).toContainText('Co.');
 });
 
+test('uniform pin labels do not break contenteditable undo', async ({ page }) => {
+  await page.locator('#feature-uniform-pin-labels-toggle').check();
+  await page.locator('#add-vendor').click();
+  const label = page.locator('.vendor-pin .label').first();
+  const originalText = (await label.textContent()) || '';
+
+  await label.dblclick();
+  await expect(label).toBeEditable();
+  await page.keyboard.press('Control+a');
+  await page.keyboard.type('Edited Label');
+  await expect(label).toContainText('Edited Label');
+
+  await page.keyboard.press('Control+z');
+  await expect(label).not.toContainText('Edited Label');
+  await page.keyboard.press('Enter');
+});
+
 test('template toggle interleaving clears redo after new commit', async ({ page }) => {
   const pins = page.locator('.vendor-pin');
   const firstTemplateToggle = page.locator('#template-list .template-item input[type="checkbox"]').first();

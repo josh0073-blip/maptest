@@ -105,17 +105,22 @@
       });
     }
 
+    function isEditableTarget(target) {
+      if (!target) return false;
+      if (target.isContentEditable) return true;
+      if (typeof target.closest === 'function') {
+        return !!target.closest('input, textarea, [contenteditable], select, button');
+      }
+      return false;
+    }
+
     document.addEventListener('keydown', (event) => {
       const key = String(event.key || '').toLowerCase();
       const modifierPressed = event.ctrlKey || event.metaKey;
       if (!modifierPressed) return;
 
       const target = event.target;
-      const inEditable = target && (
-        target.tagName === 'INPUT' ||
-        target.tagName === 'TEXTAREA' ||
-        target.isContentEditable
-      );
+      const inEditable = isEditableTarget(target);
 
       if (inEditable) return;
 
