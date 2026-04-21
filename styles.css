@@ -727,10 +727,20 @@ body {
 }
 
 .vendor-pin .label {
+  display: inline-block;
   min-width: 70px;
   outline: none;
   color: #064e3b;
   font-weight: 600;
+}
+
+.uniform-pin-labels .vendor-pin .label {
+  min-width: 15ch;
+  width: 15ch;
+  max-width: 15ch;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
 }
 
 .vendor-pin .rotate {

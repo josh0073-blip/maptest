@@ -254,7 +254,12 @@
           <input id="feature-congestion-toggle" type="checkbox" />
           Enable label substitution with numbered key
         </label>
-        <p class="control-note">When enabled, crowded pins can show numeric labels and list full names below.</p>
+        <label class="control-row mb-8" for="feature-uniform-pin-labels-toggle">
+          <input id="feature-uniform-pin-labels-toggle" type="checkbox" />
+          Use uniform pin labels (fixed 15-character width)
+        </label>
+        <p class="control-note">When enabled, every pin label uses the same width, regardless of how much text it contains.</p>
+        <p class="control-note">This makes pins visually uniform while still preserving the vendor name text.</p>
         <div id="congestion-key-panel" class="congestion-key-panel" hidden>
           <div class="congestion-key-title">Congestion Key</div>
           <ol id="congestion-key-list" class="congestion-key-list"></ol>

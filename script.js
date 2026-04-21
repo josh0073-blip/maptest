@@ -25,6 +25,7 @@ const vendorList = document.getElementById('vendor-list');
 const mapArea = document.getElementById('mapArea');
 const congestionToolsGroup = document.getElementById('congestion-tools-group');
 const featureCongestionToggle = document.getElementById('feature-congestion-toggle');
+const featureUniformPinLabelsToggle = document.getElementById('feature-uniform-pin-labels-toggle');
 const congestionKeyPanel = document.getElementById('congestion-key-panel');
 const congestionKeyList = document.getElementById('congestion-key-list');
 const mapCongestionKeyPanel = document.getElementById('map-congestion-key-panel');
@@ -168,6 +169,7 @@ const CONGESTION_KEY_MIN_HEIGHT = 150;
 const TOUCH_DOUBLE_TAP_MS = 380;
 const DEFAULT_FEATURE_FLAGS = Object.freeze({
   congestionLabelSubstitution: false,
+  uniformPinLabelWidth: false,
   congestionMapKeyPosition: CONGESTION_KEY_DEFAULT_POSITION,
   congestionMapKeySize: CONGESTION_KEY_DEFAULT_SIZE
 });
@@ -237,6 +239,10 @@ const mapCongestionKeyResizeState = {
 
 function isCongestionModeEnabled() {
   return !!featureFlags.congestionLabelSubstitution;
+}
+
+function isUniformPinLabelWidthEnabled() {
+  return !!featureFlags.uniformPinLabelWidth;
 }
 
 function getCongestionMapKeyPosition() {
@@ -320,6 +326,7 @@ function persistFeatureFlags() {
 function syncCongestionFeatureUi() {
   if (congestionToolsGroup) congestionToolsGroup.hidden = false;
   if (featureCongestionToggle) featureCongestionToggle.checked = isCongestionModeEnabled();
+  if (featureUniformPinLabelsToggle) featureUniformPinLabelsToggle.checked = isUniformPinLabelWidthEnabled();
   if (!isCongestionModeEnabled() && congestionKeyPanel) congestionKeyPanel.hidden = true;
   if (mapCongestionKeyPanel) {
     mapCongestionKeyPanel.hidden = !isCongestionModeEnabled();
@@ -328,6 +335,7 @@ function syncCongestionFeatureUi() {
     resetMapCongestionKeyDragState();
     resetMapCongestionKeyResizeState();
   }
+  document.documentElement.classList.toggle('uniform-pin-labels', isUniformPinLabelWidthEnabled());
   applyMapCongestionKeySizeClamped({ persist: false });
   applyMapCongestionKeyPositionClamped({ persist: false });
 }
@@ -383,6 +391,16 @@ if (featureCongestionToggle) {
     syncCongestionFeatureUi();
     updateVendorList();
     persistState();
+  });
+}
+
+if (featureUniformPinLabelsToggle) {
+  featureUniformPinLabelsToggle.addEventListener('change', () => {
+    featureFlags = Object.assign({}, featureFlags, {
+      uniformPinLabelWidth: !!featureUniformPinLabelsToggle.checked
+    });
+    persistFeatureFlags();
+    syncCongestionFeatureUi();
   });
 }
 const pinStyleTools = window.createPinStyleTools({
