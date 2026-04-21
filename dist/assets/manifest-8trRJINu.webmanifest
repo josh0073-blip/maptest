@@ -32,5 +32,6 @@
       "type": "image/svg+xml",
       "purpose": "maskable"
     }
-  ]
+  ],
+  "version": "1.5.1"
 }

@@ -1,19 +1,19 @@
 {
   "index.html": {
-    "file": "assets/main-DVKEdTKS.js",
+    "file": "assets/main-Cat6WJmj.js",
     "name": "main",
     "src": "index.html",
     "isEntry": true,
     "css": [
-      "assets/main-BaEopulo.css"
+      "assets/main-BgVDzSjm.css"
     ],
     "assets": [
-      "assets/manifest-vKirWI-e.webmanifest",
+      "assets/manifest-8trRJINu.webmanifest",
       "assets/pwa-192-CAp8jBcA.png"
     ]
   },
   "public/manifest.webmanifest": {
-    "file": "assets/manifest-vKirWI-e.webmanifest",
+    "file": "assets/manifest-8trRJINu.webmanifest",
     "src": "public/manifest.webmanifest"
   },
   "public/pwa-192.png": {

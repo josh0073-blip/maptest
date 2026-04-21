@@ -4,30 +4,43 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#0f172a" />
-  <link rel="manifest" href="/maptest/assets/manifest-vKirWI-e.webmanifest" />
+  <link rel="manifest" href="/maptest/assets/manifest-8trRJINu.webmanifest" />
   <link rel="apple-touch-icon" href="/maptest/assets/pwa-192-CAp8jBcA.png" />
   <!-- Note: 'meta[name=theme-color]' is not supported by Firefox, but no changes are needed as it works in other browsers. -->
   <title>Farmers Market Vendor Map</title>
   <link rel="icon" href="data:," />
-  <script type="module" crossorigin src="/maptest/assets/main-DVKEdTKS.js"></script>
-  <link rel="stylesheet" crossorigin href="/maptest/assets/main-BaEopulo.css">
+  <script type="module" crossorigin src="/maptest/assets/main-Cat6WJmj.js"></script>
+  <link rel="stylesheet" crossorigin href="/maptest/assets/main-BgVDzSjm.css">
 <link rel="manifest" href="/maptest/manifest.webmanifest"><script id="vite-plugin-pwa:register-sw" src="/maptest/registerSW.js"></script></head>
 <body>
   <div class="app-shell">
     <button class="sidebar-toggle" aria-label="Open sidebar" aria-controls="app-sidebar" aria-expanded="false" tabindex="0">☰ Menu</button>
     <aside id="app-sidebar" class="sidebar">
-      <h1>Vendor Map Editor</h1>
+      <div class="sidebar-header">
+        <h1>Vendor Map Editor</h1>
+        <p id="app-version" class="app-version">Version 1.0.0</p>
+        <p id="app-last-updated" class="app-last-updated">App last updated on --/--/--</p>
+      </div>
       <p>Use this page to place/edit vendor names on the map.</p>
 
       <details class="control-group">
-        <summary class="control-group__title">Map Session</summary>
-        <p class="control-subtitle">Create, save, restore, and export your current market layout.</p>
+        <summary class="control-group__title">Quick Actions</summary>
+        <p class="control-subtitle">Use the most common editing commands for the current map.</p>
         <button id="add-vendor" aria-label="Add Vendor Pin">Add Vendor</button>
-        <button id="save-state" aria-label="Save Map">Save Map</button>
-        <button id="load-state" aria-label="Load Map">Load Map</button>
-        <button id="undo-btn" aria-label="Undo">Undo</button>
-        <button id="redo-btn" aria-label="Redo">Redo</button>
+        <div class="control-row control-row--split">
+          <button id="undo-btn" aria-label="Undo">Undo</button>
+          <button id="redo-btn" aria-label="Redo">Redo</button>
+        </div>
         <button id="reset-map" aria-label="Reset Map">Reset Map</button>
+
+        <p class="control-subtitle">Save and load the current layout.</p>
+        <div class="control-row control-row--split">
+          <button id="save-state" aria-label="Save Map State">Save Map State</button>
+          <button id="load-state" aria-label="Load Map State">Load Map State</button>
+        </div>
+        <p class="control-note">This saves state in browser storage. Use the archive section for named version snapshots.</p>
+
+        <p class="control-subtitle">Export the current layout.</p>
         <div class="control-row control-row--split">
           <button id="export-jpg" aria-label="Export JPG">Export JPG</button>
           <button id="export-pdf" aria-label="Export PDF">Export PDF</button>
@@ -105,8 +118,8 @@
       </details>
 
       <details class="control-group">
-        <summary class="control-group__title">Background Setup</summary>
-        <p class="control-subtitle">Set source image and adjust background scale for pin alignment.</p>
+        <summary class="control-group__title">Background</summary>
+        <p class="control-subtitle">Set the background image and manage saved background entries.</p>
         <input id="bg-url-input" class="input-full mb-6" type="text" placeholder="Image URL" />
         <button id="bg-url-btn">Set background URL</button>
         <input id="bg-file-input" class="file-full mt-8" type="file" accept="image/*" />
@@ -123,15 +136,13 @@
           <span id="bg-opacity-value">100%</span>
         </div>
         <p class="control-note">Adjust scale to align the background with your pin layout.</p>
-      </details>
 
-      <details class="control-group">
-        <summary class="control-group__title">Background Library</summary>
+        <p class="control-subtitle">Background Library</p>
         <input id="bg-lib-name-input" class="input-full mb-6" type="text" placeholder="Library name" />
-        <button id="bg-lib-save-btn">Save Current Background</button>
+        <button id="bg-lib-save-btn">Save Background to Library</button>
         <select id="bg-lib-select" class="select-list" size="6"></select>
         <div class="control-row control-row--split">
-          <button id="bg-lib-apply-btn">Apply Selected</button>
+          <button id="bg-lib-apply-btn">Apply Selected Background</button>
           <button id="bg-lib-rename-btn">Rename Selected</button>
         </div>
         <div class="control-row control-row--split">
@@ -142,7 +153,8 @@
       </details>
 
       <details class="control-group">
-        <summary class="control-group__title">Vendor Templates</summary>
+        <summary class="control-group__title">Vendor Lists</summary>
+        <p class="control-subtitle">Current List</p>
         <div class="vendor-template-controls">
           <input id="template-name-input" class="input-full mb-6" type="text" placeholder="New vendor name" />
           <button id="template-add-btn">Add to list</button>
@@ -159,15 +171,13 @@
         </div>
         <div id="template-counter" class="template-counter" aria-live="polite">Vendors: 0 | Active: 0</div>
         <div id="template-list" class="template-list"></div>
-      </details>
 
-      <details class="control-group">
-        <summary class="control-group__title">Template Library</summary>
+        <p class="control-subtitle">Saved Lists</p>
         <input id="vendor-lib-name-input" class="input-full mb-6" type="text" placeholder="List name" />
-        <button id="vendor-lib-save-btn">Save Current Templates</button>
+        <button id="vendor-lib-save-btn">Save Current List</button>
         <select id="vendor-lib-select" class="select-list" size="6"></select>
         <select id="vendor-lib-load-mode" class="select-full mb-6">
-          <option value="replace">Replace Current Templates</option>
+          <option value="replace">Replace Current List</option>
           <option value="merge-unique">Merge Unique Names</option>
           <option value="merge-keep-status">Merge and Keep Status</option>
         </select>
@@ -177,18 +187,18 @@
         </div>
         <div class="control-row control-row--split">
           <button id="vendor-lib-delete-btn">Delete Selected</button>
-          <button id="vendor-lib-export-json-btn">Export JSON</button>
+          <button id="vendor-lib-export-json-btn">Export List JSON</button>
         </div>
         <div class="control-row control-row--split">
-          <button id="vendor-lib-export-csv-btn">Export CSV</button>
+          <button id="vendor-lib-export-csv-btn">Export List CSV</button>
         </div>
         <input id="vendor-lib-import-input" class="file-full" type="file" accept=".json,.csv" />
       </details>
 
       <details class="control-group">
-        <summary class="control-group__title">Backup and Archive</summary>
+        <summary class="control-group__title">Versioning / Restore</summary>
         <p class="control-subtitle">Capture named snapshots and restore map versions quickly.</p>
-        <button id="snapshot-export-btn">Export Full Snapshot</button>
+        <button id="snapshot-export-btn">Export Snapshot</button>
         <label class="field-label" for="snapshot-archive-name-input">Archive name</label>
         <input id="snapshot-archive-name-input" class="input-full mb-6" type="text" placeholder="e.g. Market Layout - 2026-04-05" />
         <label class="field-label" for="snapshot-archive-event-tag-input">Event tag (optional)</label>
@@ -197,7 +207,7 @@
           <input id="snapshot-archive-auto-tag-toggle" type="checkbox" checked />
           Auto-tag snapshots with date and map title
         </label>
-        <button id="snapshot-archive-save-btn">Save Current Map To Archive Library</button>
+        <button id="snapshot-archive-save-btn">Save to Archive</button>
         <label class="field-label" for="snapshot-archive-select">Archived snapshots</label>
         <input id="snapshot-archive-search-input" class="input-full mb-6" type="text" placeholder="Search by name or tag" />
         <div class="control-row control-row--split">
@@ -230,8 +240,10 @@
         <ol class="control-note instructions-list">
           <li>Drag pins to position them on the background map.</li>
           <li>Double-click vendor text to edit inline.</li>
-          <li>Use save/load for localStorage state.</li>
-          <li>Use checkbox list to activate/deactivate vendors.</li>
+          <li>Save and load map state in browser storage; archive keeps named snapshots.</li>
+          <li>Use Ctrl/Cmd + click on a pin to toggle it in the selection.</li>
+          <li>Press Ctrl/Cmd + A to select all pins.</li>
+          <li>Press Esc to clear the active pin selection.</li>
           <li>Click ↻ on pin to rotate by 45°.</li>
           <li>Upload CSV to batch add vendor templates.</li>
         </ol>
@@ -243,7 +255,12 @@
           <input id="feature-congestion-toggle" type="checkbox" />
           Enable label substitution with numbered key
         </label>
-        <p class="control-note">When enabled, crowded pins can show numeric labels and list full names below.</p>
+        <label class="control-row mb-8" for="feature-uniform-pin-labels-toggle">
+          <input id="feature-uniform-pin-labels-toggle" type="checkbox" />
+          Use uniform pin labels (fixed 15-character width)
+        </label>
+        <p class="control-note">When enabled, every pin label uses the same width, regardless of how much text it contains.</p>
+        <p class="control-note">This makes pins visually uniform while still preserving the vendor name text.</p>
         <div id="congestion-key-panel" class="congestion-key-panel" hidden>
           <div class="congestion-key-title">Congestion Key</div>
           <ol id="congestion-key-list" class="congestion-key-list"></ol>
@@ -295,6 +312,7 @@
         <li><strong>Ctrl + Z</strong>: Undo</li>
         <li><strong>Ctrl + Y</strong> / <strong>Ctrl + Shift + Z</strong>: Redo</li>
         <li><strong>Space</strong>: Pan tool while held</li>
+        <li><strong>Esc</strong>: Clear selected pins</li>
         <li><strong>Delete</strong>: Remove selected pins</li>
       </ul>
       <div class="keyboard-help-actions">
