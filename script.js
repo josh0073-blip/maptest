@@ -505,6 +505,50 @@ const actions = {
   }
 };
 
+function getBackgroundUrlCandidates(url) {
+  const normalized = String(url || '').trim();
+  if (!normalized) return [];
+
+  const candidates = [normalized];
+  const publicPrefix = 'public/bootstrap-backgrounds/';
+  const bootstrapPrefix = 'bootstrap-backgrounds/';
+  const absolutePublicPrefix = '/public/bootstrap-backgrounds/';
+  const absoluteBootstrapPrefix = '/bootstrap-backgrounds/';
+
+  if (normalized.startsWith(publicPrefix)) {
+    candidates.push(bootstrapPrefix + normalized.slice(publicPrefix.length));
+  } else if (normalized.startsWith(bootstrapPrefix)) {
+    candidates.push(publicPrefix + normalized.slice(bootstrapPrefix.length));
+  }
+
+  if (normalized.startsWith(absolutePublicPrefix)) {
+    candidates.push(absoluteBootstrapPrefix + normalized.slice(absolutePublicPrefix.length));
+  } else if (normalized.startsWith(absoluteBootstrapPrefix)) {
+    candidates.push(absolutePublicPrefix + normalized.slice(absoluteBootstrapPrefix.length));
+  }
+
+  return Array.from(new Set(candidates));
+}
+
+function testImageExists(url) {
+  return new Promise((resolve) => {
+    const image = new Image();
+    image.onload = () => resolve(true);
+    image.onerror = () => resolve(false);
+    image.src = url;
+  });
+}
+
+async function resolveBackgroundUrl(url) {
+  const candidates = getBackgroundUrlCandidates(url);
+  for (const candidate of candidates) {
+    if (await testImageExists(candidate)) {
+      return candidate;
+    }
+  }
+  return null;
+}
+
 function setBackground(url) {
   const normalizeUrl = typeof window.normalizeBackgroundUrl === 'function'
     ? window.normalizeBackgroundUrl
@@ -512,8 +556,15 @@ function setBackground(url) {
   const safeUrl = normalizeUrl(url);
 
   actions.setBackgroundUrl(safeUrl);
-  if (appState.backgroundUrl) {
-    document.documentElement.style.setProperty('--bg-url', `url('${appState.backgroundUrl}')`);
+  if (safeUrl) {
+    document.documentElement.style.setProperty('--bg-url', `url('${safeUrl}')`);
+    (async () => {
+      const resolvedUrl = await resolveBackgroundUrl(safeUrl);
+      if (resolvedUrl && resolvedUrl !== safeUrl) {
+        actions.setBackgroundUrl(resolvedUrl);
+        document.documentElement.style.setProperty('--bg-url', `url('${resolvedUrl}')`);
+      }
+    })();
   } else {
     document.documentElement.style.removeProperty('--bg-url');
   }

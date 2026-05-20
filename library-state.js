@@ -35,7 +35,7 @@
   }
 
   function toBootstrapBackgroundUrl(filename) {
-    return 'public/bootstrap-backgrounds/' + encodeURIComponent(String(filename || '').trim());
+    return 'bootstrap-backgrounds/' + encodeURIComponent(String(filename || '').trim());
   }
 
   const BOOTSTRAP_BACKGROUND_SEEDS = [].concat(

@@ -1,6 +1,6 @@
 {
   "name": "farmers-market-vendor-map",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "private": true,
   "description": "SPA tooling for Farmers Market Vendor Map smoke tests",
   "scripts": {
