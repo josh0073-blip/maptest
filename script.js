@@ -1,18 +1,8 @@
+// NOTE: Service worker registration is handled exclusively by src/main.js via
+// vite-plugin-pwa (registerServiceWorker). Do NOT add a second registration here.
+// A dual registration conflicts with the Workbox-generated SW on GitHub Pages,
+// causing stale cache delivery after deploys. See public/sw.js for source-mode SW.
 import { createSnapshotArchiveManager } from './snapshot-archive-manager.js';
-
-function registerRootServiceWorker() {
-  if (typeof window === 'undefined' || !('serviceWorker' in navigator)) {
-    return;
-  }
-
-  window.addEventListener('load', function () {
-    navigator.serviceWorker.register('./sw.js', { scope: './' }).catch(function (err) {
-      console.warn('Service worker registration failed for root-hosted mode.', err);
-    });
-  });
-}
-
-registerRootServiceWorker();
 
 const pinsContainer = document.getElementById('pinsContainer');
 const addVendorBtn = document.getElementById('add-vendor');

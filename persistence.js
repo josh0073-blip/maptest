@@ -84,7 +84,17 @@
     function persistState(config) {
       const settings = config || {};
       const download = !!settings.download;
-      const payload = JSON.stringify(buildState(), null, 2);
+      // FAILURE POINT: buildState() could theoretically produce an unserializable
+      // object (circular reference, Symbol key) if state becomes corrupted.
+      // Guard here so a serialization failure surfaces as a clear user-facing error
+      // rather than an unhandled exception that silently aborts the save.
+      let payload;
+      try {
+        payload = JSON.stringify(buildState(), null, 2);
+      } catch (err) {
+        warnStorageIssue('Failed serializing map state — save aborted.', err);
+        return false;
+      }
       const filename = 'farmers-market-map-' + getDateStamp() + '.json';
 
       try {
@@ -103,7 +113,15 @@
     }
 
     async function saveState() {
-      const payload = JSON.stringify(buildState(), null, 2);
+      // FAILURE POINT: same serialization guard as persistState. JSON.stringify can
+      // throw on circular references or Symbol keys in a corrupted state object.
+      let payload;
+      try {
+        payload = JSON.stringify(buildState(), null, 2);
+      } catch (err) {
+        warnStorageIssue('Failed serializing map state — save aborted.', err);
+        return false;
+      }
       const filename = 'farmers-market-map-' + getDateStamp() + '.json';
 
       try {

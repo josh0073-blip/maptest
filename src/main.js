@@ -5,9 +5,12 @@ import { registerSW } from 'virtual:pwa-register';
 window.html2canvas = html2canvas;
 window.jspdf = { jsPDF };
 window.jsPDF = jsPDF;
+// FAILURE POINT: If ENABLE_SERVICE_WORKER is true and the SW registration fails,
+// app still loads normally — check DevTools > Application > Service Workers.
+// If STARTUP_TIMEOUT_MS elapses before all modules load, showStartupError fires.
+// Increase this value only as a last resort; a long timeout hides slow module loads.
 const ENABLE_SERVICE_WORKER = import.meta.env.PROD;
 const STARTUP_TIMEOUT_MS = 8000;
-const RUN_LEGACY_OFFLINE_CLEANUP = false;
 
 let startupComplete = false;
 let startupWatchdogId = null;
@@ -73,30 +76,58 @@ startupWatchdogId = window.setTimeout(() => {
 }, STARTUP_TIMEOUT_MS);
 
 async function bootstrapLegacyModules() {
-  await import('../export.js');
-  await import('../templates.js');
-  await import('../drag.js');
-  await import('../confirm-dialog.js');
-  await import('../input-dialog.js');
-  await import('../state-validation.js');
-  await import('../app-state.js');
-  await import('../panzoom.js');
-  await import('../selection.js');
-  await import('../persistence.js');
-  await import('../history-manager.js');
-  await import('../state-checkpoint-manager.js');
-  await import('../archive-storage.js');
-  await import('../snapshot-archive-manager.js');
-  await import('../vendor-list-tools.js');
-  await import('../pin-style-tools.js');
-  await import('../pin-manager.js');
-  await import('../event-listeners.js');
-  await import('../app-bootstrap.js');
-  await import('../notify-tools.js');
-  await import('../snapshot-tools.js');
-  await import('../library-state.js');
-  await import('../snapshot-archive-controller.js');
-  await import('../storage-sync.js');
+  // BATCH 1 — Independent utilities and dialog primitives.
+  // These modules expose window globals (window.normalizeMapState,
+  // window.sanitizeEditableText, window.createAppStateStore, etc.) that Batch 2
+  // modules consume. No inter-batch dependency within this group.
+  //
+  // FAILURE POINT: If a batch throws, the error propagates to the .catch() at the
+  // bottom of this file and showStartupError is called with a full stack trace.
+  // A "window.createXxx is not a function" error means a module that sets that global
+  // is being consumed by a module in an earlier batch — move the producer to an earlier batch.
+  await Promise.all([
+    import('../export.js'),
+    import('../templates.js'),
+    import('../drag.js'),
+    import('../confirm-dialog.js'),
+    import('../input-dialog.js'),
+    import('../state-validation.js'),
+    import('../app-state.js'),
+    import('../panzoom.js'),
+    import('../selection.js'),
+  ]);
+
+  // BATCH 2 — Core state infrastructure.
+  // Each module here depends on window globals set by Batch 1.
+  // Safe to load in parallel within this batch.
+  await Promise.all([
+    import('../persistence.js'),
+    import('../history-manager.js'),
+    import('../state-checkpoint-manager.js'),
+    import('../archive-storage.js'),
+    import('../snapshot-archive-manager.js'),
+    import('../vendor-list-tools.js'),
+    import('../pin-style-tools.js'),
+    import('../pin-manager.js'),
+    import('../notify-tools.js'),
+    import('../snapshot-tools.js'),
+    import('../library-state.js'),
+  ]);
+
+  // BATCH 3 — Controllers and event wiring.
+  // These consume the complete state infrastructure from Batch 2.
+  // event-listeners.js and app-bootstrap.js must complete before script.js runs.
+  await Promise.all([
+    import('../event-listeners.js'),
+    import('../app-bootstrap.js'),
+    import('../snapshot-archive-controller.js'),
+    import('../storage-sync.js'),
+  ]);
+
+  // BATCH 4 — Main script.
+  // script.js references every window global set by Batches 1–3.
+  // It must execute after all other modules are fully evaluated.
+  // Do NOT move this into a Promise.all — order is required.
   await import('../script.js');
 }
 
@@ -180,49 +211,7 @@ async function registerServiceWorker() {
   }
 }
 
-async function cleanupLegacyOfflineState() {
-  if (!RUN_LEGACY_OFFLINE_CLEANUP) {
-    return;
-  }
-
-  if (!('serviceWorker' in navigator)) {
-    return;
-  }
-
-  try {
-    const registrations = await navigator.serviceWorker.getRegistrations();
-    await Promise.all(registrations.map(async (registration) => {
-      const scriptUrl = registration && registration.active && registration.active.scriptURL
-        ? registration.active.scriptURL
-        : '';
-      if (!scriptUrl || scriptUrl.endsWith('/sw.js')) {
-        await registration.unregister();
-      }
-    }));
-  } catch (error) {
-    console.warn('Legacy service worker cleanup failed.', error);
-    logAppEvent('warn', 'Legacy service worker cleanup failed.', { source: 'cleanup', error: error || null });
-  }
-
-  if (!('caches' in window)) {
-    return;
-  }
-
-  try {
-    const cacheKeys = await caches.keys();
-    await Promise.all(cacheKeys.map(async (cacheKey) => {
-      if (cacheKey.startsWith('fm-vendor-map-shell-')) {
-        await caches.delete(cacheKey);
-      }
-    }));
-  } catch (error) {
-    console.warn('Legacy cache cleanup failed.', error);
-    logAppEvent('warn', 'Legacy cache cleanup failed.', { source: 'cleanup', error: error || null });
-  }
-}
-
-cleanupLegacyOfflineState()
-  .then(() => bootstrapLegacyModules())
+bootstrapLegacyModules()
   .then(() => {
     reportBootstrapDiagnostics();
     void checkStoragePressure();

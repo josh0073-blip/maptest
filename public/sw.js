@@ -1,3 +1,32 @@
+// =============================================================================
+// SERVICE WORKER — SOURCE-DEPLOYED MODE
+// =============================================================================
+// This SW file is used ONLY when the app is served directly from the source
+// tree (i.e., without a Vite build). It provides basic offline caching for the
+// source-mode shell.
+//
+// PRODUCTION (GitHub Pages): Do NOT use this file. The Vite build via
+// vite-plugin-pwa generates a Workbox-based SW in dist/ that handles the
+// /maptest/ base path automatically. Registering this SW in production would
+// compete with the Workbox SW and corrupt the cache.
+//
+// FAILURE POINT — Cache name versioning:
+//   If you change CACHE_NAME (e.g., to v3), the activate handler below will
+//   delete all prior caches, forcing a full asset re-download on next visit.
+//   Always bump the suffix when making breaking asset changes, never when
+//   making minor updates (rely on network-first for navigations instead).
+//
+// FAILURE POINT — STATIC_URLS:
+//   Paths here are root-relative ('/') for source-mode (served at '/').
+//   Do NOT add /maptest/ prefixes — those are only needed in the Vite build.
+//   If a new static asset is added to the source shell, add it to STATIC_URLS.
+//
+// FAILURE POINT — BUILD_MANIFEST_PATHS:
+//   readBuildManifest() tries to fetch a Vite manifest to discover build assets.
+//   In source-mode this always 404s, which is expected and silently skipped.
+//   The try/continue pattern in the loop handles this correctly.
+// =============================================================================
+
 const CACHE_NAME = 'fm-vendor-map-shell-v2';
 const STATIC_URLS = ['/', '/index.html', '/manifest.webmanifest', '/pwa-icon.svg', '/pwa-192.png', '/pwa-512.png'];
 const BUILD_MANIFEST_PATHS = ['/.vite/manifest.json', '/manifest.json'];

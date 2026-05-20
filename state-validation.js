@@ -78,7 +78,6 @@
   }
 
   function normalizeVendor(vendor, index, validCategoryIds) {
-    console.log('Normalizing vendor:', vendor); // Debugging log
     const id = Math.max(1, Math.floor(toFiniteNumber(vendor && vendor.id, index + 1)));
     const name = sanitizeEditableText(vendor && vendor.name, 'Vendor ' + id, 80);
     const x = toFiniteNumber(vendor && vendor.x, 60);
@@ -125,12 +124,10 @@
       normalized.customColor = vendor.customColor;
     }
 
-    console.log('Normalized vendor:', normalized); // Debugging log
     return normalized;
   }
 
   function normalizeMapState(parsed, defaults) {
-    console.log('Normalizing map state:', parsed); // Debugging log
     const safeParsed = parsed && typeof parsed === 'object' ? parsed : {};
     const safeDefaults = defaults && typeof defaults === 'object' ? defaults : {};
 
@@ -168,8 +165,6 @@
         y: normalizedVendor.y * scaleY
       });
     });
-
-    console.log('Normalized vendors:', vendors); // Debugging log
 
     const maxVendorId = vendors.reduce(function (max, vendor) {
       return Math.max(max, vendor.id);

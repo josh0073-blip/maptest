@@ -119,7 +119,23 @@ import { PRELOADED_SNAPSHOTS } from './snapshot-archive-manager.js';
         const bootstrapVersionSeen = readBootstrapVersion();
 
         if (!db) {
+          // FAILURE POINT: IndexedDB is unavailable (private browsing, browser policy,
+          // or quota failure). Archive storage drops to localStorage (~5 MB vs. hundreds MB).
+          // Users may hit silent save failures with large archives. Warn once per session.
           backend = 'localStorage';
+          try {
+            const runtimeNotify = window.appNotify;
+            if (runtimeNotify && typeof runtimeNotify.warn === 'function') {
+              runtimeNotify.warn(
+                'Archive storage is running in limited mode (browser storage restricted). ' +
+                'Export backups regularly — archive capacity is reduced to approximately 5 MB.'
+              );
+            } else {
+              console.warn('Archive storage: IndexedDB unavailable, falling back to localStorage.');
+            }
+          } catch (notifyErr) {
+            console.warn('Archive storage: IndexedDB unavailable, falling back to localStorage.', notifyErr);
+          }
           const storedLegacy = readLegacyLocalStorage();
           const mergedLegacy = mergePreloadedSnapshots(storedLegacy);
 

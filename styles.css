@@ -314,10 +314,8 @@ body {
   margin-top: 8px !important;
 }
 
-.control-stack {
-  display: grid;
-  gap: var(--sidebar-gap);
-}
+/* .control-stack was removed — no elements use this class. If re-adding a
+   stacked-grid layout, use .control-row with flex-direction:column instead. */
 
 .control-row {
   display: flex;
@@ -371,9 +369,8 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-.range-input--compact {
-  width: 90px;
-}
+/* .range-input--compact was removed — no elements use this class.
+   Use inline style or a new utility class if a compact range is needed. */
 
 .control-note {
   margin: 4px 0;
@@ -744,18 +741,8 @@ body {
   white-space: nowrap;
 }
 
-.vendor-pin .rotate {
-  border: none;
-  background: transparent;
-  color: #166534;
-  font-size: 14px;
-  cursor: pointer;
-  padding: 0 2px;
-}
-
-.vendor-pin .rotate:hover {
-  color: #064e3b;
-}
+/* The combined selector above already covers .rotate base + hover.
+   The .delete selector below intentionally overrides color to red. */
 
 .vendor-pin .delete {
   border: none;
