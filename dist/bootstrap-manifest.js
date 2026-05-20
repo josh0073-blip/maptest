@@ -1,8 +1,11 @@
 // Runtime bootstrap seed fallback for environments where Vite source transforms are not applied.
 var __BOOTSTRAP_BACKGROUND_FILES__ = [
   "2026 Test b.jpg",
+  "Southland_Drive_v4.png",
   "Sunday 2026.png",
-  "Updated Template for Southland Map 2026 v3.png"
+  "Updated Template for Southland Map 2026 v3.png",
+  "Updated Template for Southland Map 2026 v4b.png",
+  "v4b Southland Map 2026 .png"
 ];
 
 var __BOOTSTRAP_VENDOR_LIST_FILES__ = [

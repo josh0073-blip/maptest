@@ -955,33 +955,10 @@ function getSelectedBackgroundLibraryEntry() {
   return libraryTools.getState().backgroundLibrary.find((entry) => entry.id === selectedId) || null;
 }
 
-async function scanBootstrapBackgrounds() {
-  try {
-    const response = await fetch('/bootstrap-backgrounds.json');
-    if (!response.ok) {
-      console.error('Failed to fetch bootstrap backgrounds JSON');
-      return [];
-    }
-    const files = await response.json();
-    return files.filter(file => file.endsWith('.png') || file.endsWith('.jpg'));
-  } catch (error) {
-    console.error('Error fetching bootstrap backgrounds JSON:', error);
-    return [];
-  }
-}
-
 async function renderBackgroundLibraryOptions() {
   if (!bgLibSelect) return;
   const selectedId = bgLibSelect.value;
   bgLibSelect.innerHTML = '';
-
-  const dynamicBackgrounds = await scanBootstrapBackgrounds();
-  dynamicBackgrounds.forEach((file, index) => {
-    const option = document.createElement('option');
-    option.value = `dynamic-${index}`;
-    option.textContent = file;
-    bgLibSelect.append(option);
-  });
 
   libraryTools.getState().backgroundLibrary.forEach((entry) => {
     const option = document.createElement('option');
