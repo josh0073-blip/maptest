@@ -514,6 +514,15 @@ function getBackgroundUrlCandidates(url) {
   const bootstrapPrefix = 'bootstrap-backgrounds/';
   const absolutePublicPrefix = '/public/bootstrap-backgrounds/';
   const absoluteBootstrapPrefix = '/bootstrap-backgrounds/';
+  const imageNameOnly = !normalized.includes('/') && /\.(png|jpe?g|webp|gif|svg)$/i.test(normalized);
+
+  if (imageNameOnly) {
+    candidates.push(bootstrapPrefix + normalized);
+    candidates.push(publicPrefix + normalized);
+    candidates.push(absoluteBootstrapPrefix + normalized);
+    candidates.push(absolutePublicPrefix + normalized);
+    return Array.from(new Set(candidates));
+  }
 
   if (normalized.startsWith(publicPrefix)) {
     candidates.push(bootstrapPrefix + normalized.slice(publicPrefix.length));

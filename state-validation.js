@@ -29,6 +29,23 @@
     if (raw.startsWith('data:image/')) return raw;
     if (raw.startsWith('./') || raw.startsWith('../') || raw.startsWith('/')) return raw;
 
+    const bootstrapPrefix = 'bootstrap-backgrounds/';
+    const publicPrefix = 'public/bootstrap-backgrounds/';
+    const imageNameOnly = !raw.includes('/') && /\.(png|jpe?g|webp|gif|svg)$/i.test(raw);
+
+    if (imageNameOnly) {
+      return bootstrapPrefix + encodeURIComponent(raw);
+    }
+
+    if (
+      raw.startsWith(bootstrapPrefix) ||
+      raw.startsWith(publicPrefix) ||
+      raw.startsWith('/' + bootstrapPrefix) ||
+      raw.startsWith('/' + publicPrefix)
+    ) {
+      return raw;
+    }
+
     try {
       const parsed = new URL(raw, window.location.href);
       const protocol = String(parsed.protocol || '').toLowerCase();
