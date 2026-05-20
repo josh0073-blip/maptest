@@ -66,6 +66,14 @@ function bootstrapBackgroundFileListPlugin() {
     });
   }
 
+  function createBootstrapManifestSource(files, vendorListPayloads) {
+    return `// Runtime bootstrap seed fallback for environments where Vite source transforms are not applied.
+var __BOOTSTRAP_BACKGROUND_FILES__ = ${JSON.stringify(files, null, 2)};
+
+var __BOOTSTRAP_VENDOR_LIST_FILES__ = ${JSON.stringify(vendorListPayloads, null, 2)};
+`;
+  }
+
   return {
     name: 'bootstrap-background-file-list',
     transform(code, id) {
@@ -116,16 +124,21 @@ function bootstrapBackgroundFileListPlugin() {
         });
       });
 
-      const staticPwaAssets = ['pwa-icon.svg', 'pwa-192.png', 'pwa-512.png'];
+      const manifestSource = createBootstrapManifestSource(files, getBootstrapVendorListPayloads());
+      this.emitFile({
+        type: 'asset',
+        fileName: 'bootstrap-manifest.js',
+        source: manifestSource
+      });
+
       const bootstrapManifestPath = path.resolve(workspaceRoot, 'bootstrap-manifest.js');
-      if (fs.existsSync(bootstrapManifestPath)) {
-        this.emitFile({
-          type: 'asset',
-          fileName: 'bootstrap-manifest.js',
-          source: fs.readFileSync(bootstrapManifestPath, 'utf8')
-        });
+      try {
+        fs.writeFileSync(bootstrapManifestPath, manifestSource + '\n', 'utf8');
+      } catch (error) {
+        // Best-effort sync of the source manifest file for source deployments.
       }
 
+      const staticPwaAssets = ['pwa-icon.svg', 'pwa-192.png', 'pwa-512.png'];
       staticPwaAssets.forEach((fileName) => {
         const absolutePath = path.resolve(workspaceRoot, 'public', fileName);
         if (!fs.existsSync(absolutePath)) {
