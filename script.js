@@ -69,7 +69,53 @@ function formatAppDate(value) {
   return `${month}/${day}/${year}`;
 }
 
-const appVersionValue = (typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '1.0.0');
+function readInlineAppVersion() {
+  if (!appVersionInfo || typeof appVersionInfo.textContent !== 'string') {
+    return '';
+  }
+  const inlineValue = appVersionInfo.textContent.trim();
+  const match = /^Version\s+(.+)$/i.exec(inlineValue);
+  return (match && match[1] ? match[1] : inlineValue).trim();
+}
+
+async function hydrateAppVersionFromManifest() {
+  if (typeof __APP_VERSION__ !== 'undefined' && __APP_VERSION__) {
+    return;
+  }
+  if (!appVersionInfo) {
+    return;
+  }
+
+  const manifestLink = document.querySelector('link[rel="manifest"]');
+  const manifestHref = manifestLink && typeof manifestLink.getAttribute === 'function'
+    ? manifestLink.getAttribute('href')
+    : '';
+  if (!manifestHref) {
+    return;
+  }
+
+  try {
+    const manifestUrl = new URL(manifestHref, window.location.href);
+    const response = await fetch(manifestUrl.href, { cache: 'no-cache' });
+    if (!response.ok) {
+      return;
+    }
+    const manifest = await response.json();
+    const manifestVersion = manifest && typeof manifest.version === 'string'
+      ? manifest.version.trim()
+      : '';
+    if (!manifestVersion) {
+      return;
+    }
+    appVersionInfo.textContent = `Version ${manifestVersion}`;
+  } catch (err) {
+    // Keep the current version label if manifest metadata cannot be loaded.
+  }
+}
+
+const appVersionValue = (typeof __APP_VERSION__ !== 'undefined' && __APP_VERSION__)
+  ? __APP_VERSION__
+  : (readInlineAppVersion() || '1.0.0');
 const appLastUpdatedValue = (typeof __APP_LAST_UPDATED__ !== 'undefined' && __APP_LAST_UPDATED__) ? __APP_LAST_UPDATED__ : formatAppDate(document.lastModified || Date.now());
 
 if (appVersionInfo) {
@@ -79,6 +125,7 @@ if (appVersionInfo) {
 if (appLastUpdatedInfo) {
   appLastUpdatedInfo.textContent = `App last updated on ${appLastUpdatedValue}`;
 }
+void hydrateAppVersionFromManifest();
 const templateList = document.getElementById('template-list');
 const templateCounter = document.getElementById('template-counter');
 const selectAllBtn = document.getElementById('select-all-btn');

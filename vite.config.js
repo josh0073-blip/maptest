@@ -17,6 +17,17 @@ const resolveAlias = depsRoot
     }
   : undefined;
 const pkg = require('./package.json');
+const appManifestPath = path.resolve(workspaceRoot, 'public', 'manifest.webmanifest');
+let appVersion = pkg.version || '1.0.0';
+try {
+  const manifestRaw = fs.readFileSync(appManifestPath, 'utf8');
+  const manifestJson = JSON.parse(manifestRaw);
+  if (manifestJson && typeof manifestJson.version === 'string' && manifestJson.version.trim()) {
+    appVersion = manifestJson.version.trim();
+  }
+} catch (error) {
+  // Fall back to package.json version when manifest metadata is unavailable.
+}
 let appLastUpdated = '';
 try {
   const gitDate = execSync('git log -1 --format=%cd --date=short', { cwd: workspaceRoot, stdio: 'pipe' }).toString('utf8').trim();
@@ -160,7 +171,7 @@ export default defineConfig({
     alias: resolveAlias
   },
   define: {
-    __APP_VERSION__: JSON.stringify(pkg.version || '1.0.0'),
+    __APP_VERSION__: JSON.stringify(appVersion),
     __APP_LAST_UPDATED__: JSON.stringify(appLastUpdated)
   },
   plugins: [
