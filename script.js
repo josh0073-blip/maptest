@@ -956,13 +956,18 @@ function getSelectedBackgroundLibraryEntry() {
 }
 
 async function scanBootstrapBackgrounds() {
-  const response = await fetch('/bootstrap-backgrounds');
-  if (!response.ok) {
-    console.error('Failed to fetch bootstrap backgrounds');
+  try {
+    const response = await fetch('/bootstrap-backgrounds.json');
+    if (!response.ok) {
+      console.error('Failed to fetch bootstrap backgrounds JSON');
+      return [];
+    }
+    const files = await response.json();
+    return files.filter(file => file.endsWith('.png') || file.endsWith('.jpg'));
+  } catch (error) {
+    console.error('Error fetching bootstrap backgrounds JSON:', error);
     return [];
   }
-  const files = await response.json();
-  return files.filter(file => file.endsWith('.png') || file.endsWith('.jpg'));
 }
 
 async function renderBackgroundLibraryOptions() {
