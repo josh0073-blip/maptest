@@ -1,5 +1,4 @@
-Drop any image files into this folder and the app will auto-seed them into
-Background Library on launch.
+This folder contains dynamically loaded background files for the application. Supported formats include PNG and JPG. Ensure files are properly named and synced to appear in the sidebar.
 
 Supported extensions:
 - .png
