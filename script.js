@@ -957,7 +957,7 @@ function getSelectedBackgroundLibraryEntry() {
 
 async function scanBootstrapBackgrounds() {
   try {
-    const response = await fetch('/public/bootstrap-backgrounds.json');
+    const response = await fetch('/bootstrap-backgrounds.json');
     if (!response.ok) {
       console.error('Failed to fetch bootstrap backgrounds JSON');
       return [];

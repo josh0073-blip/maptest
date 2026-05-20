@@ -14,7 +14,8 @@
     "test:smoke:ui": "playwright test --ui",
     "test:smoke:report": "playwright show-report",
     "test:smoke:run-and-report": "playwright test ; playwright show-report",
-    "benchmark:node": "node scripts/run-benchmark-node.js"
+    "benchmark:node": "node scripts/run-benchmark-node.js",
+    "generate:backgrounds": "node scripts/generate-bootstrap-backgrounds-json.js"
   },
   "devDependencies": {
     "@playwright/test": "^1.53.0",
