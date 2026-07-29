@@ -78,7 +78,7 @@
       const sourceRows = Array.isArray(rows) ? rows : [];
       const sanitizedRows = [];
       const seenNames = new Set();
-      const unsafePattern = /[<>"&]/; // Allow single quotes and other valid punctuation
+      const unsafePattern = /[<>]/;
 
       sourceRows.forEach(function (row) {
         const rawName = Array.isArray(row) ? row[0] : row;

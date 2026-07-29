@@ -886,6 +886,23 @@ test('csv import dedupes existing names and parses quoted values', async ({ page
   await expect(page.locator('#toast-container .toast').last()).toContainText('duplicate or unsafe names skipped');
 });
 
+test('csv import keeps vendor names with common punctuation', async ({ page }) => {
+  const csvText = 'name\n"Farmer\'s Market"\n"Bread & Butter"\n"Jean-Luc Bakery (North/West)"\n';
+  await page.locator('#csv-file-input').setInputFiles({
+    name: 'vendors-punctuation.csv',
+    mimeType: 'text/csv',
+    buffer: Buffer.from(csvText)
+  });
+
+  await page.locator('#csv-upload-btn').click();
+
+  const templateList = page.locator('#template-list');
+  await expect(templateList).toContainText("Farmer's Market");
+  await expect(templateList).toContainText('Bread & Butter');
+  await expect(templateList).toContainText('Jean-Luc Bakery (North/West)');
+  await expect(page.locator('#toast-container .toast').last()).toContainText('Added 3 vendor templates from CSV.');
+});
+
 test('validate CSV content for duplicates and unsafe characters', async ({ page }) => {
   const csvText = 'name\nTomato Stand\n"Fresh, Farm"\nBakery\n"<script>"\n';
   await page.locator('#csv-file-input').setInputFiles({
