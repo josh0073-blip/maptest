@@ -54,18 +54,24 @@
       document.removeEventListener('pointercancel', stopDrag);
     }
 
-    function startDrag(event, pin, vendor) {
+    function startDrag(event, pin, vendor, originPoint) {
       if (event.pointerType === 'mouse' && event.button !== 0 && event.buttons !== 1) return;
       const mapRect = mapContent.getBoundingClientRect();
       const zoomLevel = getZoomLevel();
+      const dragOrigin = originPoint && typeof originPoint.clientX === 'number' && typeof originPoint.clientY === 'number'
+        ? originPoint
+        : event;
+      const dragPointerId = typeof dragOrigin.pointerId === 'number'
+        ? dragOrigin.pointerId
+        : (typeof event.pointerId === 'number' ? event.pointerId : null);
       activeDrag = {
         pin: pin,
         vendor: vendor,
-        pointerId: typeof event.pointerId === 'number' ? event.pointerId : null,
+        pointerId: dragPointerId,
         startVendorX: vendor.x || 0,
         startVendorY: vendor.y || 0,
-        startPointerDisplayX: (event.clientX - mapRect.left) / zoomLevel,
-        startPointerDisplayY: (event.clientY - mapRect.top) / zoomLevel
+        startPointerDisplayX: (dragOrigin.clientX - mapRect.left) / zoomLevel,
+        startPointerDisplayY: (dragOrigin.clientY - mapRect.top) / zoomLevel
       };
       if (pin && typeof pin.setPointerCapture === 'function' && typeof event.pointerId === 'number') {
         try {

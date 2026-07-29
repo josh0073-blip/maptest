@@ -17,6 +17,7 @@
       ? window.sanitizeEditableText
       : function (value, fallback) { return String(value || '').trim() || String(fallback || ''); };
     const animatePin = settings.animatePin;
+    const dragActivationDistance = 4;
 
     let maxZIndex = 1;
 
@@ -71,13 +72,85 @@
 
       const label = document.createElement('div');
       label.className = 'label';
-      label.contentEditable = 'false';
       label.textContent = vendor.name;
+
+      let pendingDrag = null;
+
+      function clearPendingDrag() {
+        if (!pendingDrag) return;
+        document.removeEventListener('pointermove', pendingDrag.onMove);
+        document.removeEventListener('pointerup', pendingDrag.onEnd);
+        document.removeEventListener('pointercancel', pendingDrag.onEnd);
+        pendingDrag = null;
+      }
+
+      function setLabelEditing(enabled) {
+        if (enabled) {
+          label.setAttribute('contenteditable', 'true');
+          return;
+        }
+        label.removeAttribute('contenteditable');
+      }
+
+      function beginLabelEdit(event) {
+        clearPendingDrag();
+        event.preventDefault();
+        event.stopPropagation();
+        setLabelEditing(true);
+        label.focus();
+        if (typeof document.execCommand === 'function') {
+          try {
+            document.execCommand('selectAll', false, null);
+          } catch (err) {
+            // Ignore browsers that do not support execCommand selection.
+          }
+        }
+      }
+
+      function queueDragStart(event) {
+        clearPendingDrag();
+
+        const pointerId = typeof event.pointerId === 'number' ? event.pointerId : null;
+        const startClientX = event.clientX;
+        const startClientY = event.clientY;
+
+        function matchesPointer(nextEvent) {
+          return !(typeof nextEvent.pointerId === 'number' && pointerId !== null && nextEvent.pointerId !== pointerId);
+        }
+
+        function cancelQueuedDrag(nextEvent) {
+          if (nextEvent && !matchesPointer(nextEvent)) return;
+          clearPendingDrag();
+        }
+
+        function maybeStartDrag(moveEvent) {
+          if (!matchesPointer(moveEvent)) return;
+          const deltaX = moveEvent.clientX - startClientX;
+          const deltaY = moveEvent.clientY - startClientY;
+          if (Math.hypot(deltaX, deltaY) < dragActivationDistance) return;
+
+          clearPendingDrag();
+          startDrag(moveEvent, pin, vendor, {
+            clientX: startClientX,
+            clientY: startClientY,
+            pointerId: pointerId
+          });
+        }
+
+        pendingDrag = {
+          onMove: maybeStartDrag,
+          onEnd: cancelQueuedDrag
+        };
+
+        document.addEventListener('pointermove', maybeStartDrag);
+        document.addEventListener('pointerup', cancelQueuedDrag);
+        document.addEventListener('pointercancel', cancelQueuedDrag);
+      }
 
       function commitLabelEdit() {
         vendor.name = sanitizeText(label.textContent, 'Vendor', 80);
         label.textContent = vendor.name;
-        label.contentEditable = 'false';
+        setLabelEditing(false);
         setPinCategory(vendor, pin, vendor.categoryId);
 
         if (vendor.templateId !== null) {
@@ -93,10 +166,7 @@
       }
 
       label.addEventListener('dblclick', (event) => {
-        event.stopPropagation();
-        label.contentEditable = 'true';
-        label.focus();
-        document.execCommand('selectAll', false, null);
+        beginLabelEdit(event);
       });
 
       label.addEventListener('blur', () => {
@@ -201,7 +271,7 @@
         if (clickedLabel && clickedLabel.isContentEditable) return;
 
         event.stopPropagation();
-        startDrag(event, pin, vendor);
+        queueDragStart(event);
       });
 
       pin.addEventListener('contextmenu', (event) => {
