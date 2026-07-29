@@ -110,6 +110,11 @@
       function queueDragStart(event) {
         clearPendingDrag();
 
+        if (event.pointerType && event.pointerType !== 'mouse') {
+          startDrag(event, pin, vendor);
+          return;
+        }
+
         const pointerId = typeof event.pointerId === 'number' ? event.pointerId : null;
         const startClientX = event.clientX;
         const startClientY = event.clientY;

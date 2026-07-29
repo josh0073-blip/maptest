@@ -83,6 +83,7 @@
       document.addEventListener('pointermove', onDrag);
       document.addEventListener('pointerup', stopDrag);
       document.addEventListener('pointercancel', stopDrag);
+      onDrag(event);
       event.preventDefault();
     }
 
